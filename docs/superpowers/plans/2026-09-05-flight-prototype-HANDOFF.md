@@ -1,6 +1,8 @@
 # Fase 1 — Handoff de status
 
-Documento de retomada. Escrito porque a implementação vai continuar em outra sessão/conta. Cobre: o que já está pronto, o que falta, e todo obstáculo de ambiente já resolvido (pra não repetir troubleshooting).
+Documento de retomada. Cobre o que está pronto, o que vem depois, e os obstáculos de ambiente já resolvidos (pra não repetir troubleshooting).
+
+**Status: Fase 1 COMPLETA.** Todas as 4 tasks feitas, playtest aprovado, branch mergeada na `master`.
 
 Referências:
 - Spec completa: `docs/superpowers/specs/2026-09-05-futebol-aviao-design.md`
@@ -9,79 +11,89 @@ Referências:
 ## Ambiente já configurado nesta máquina
 
 - **Unreal Engine 5.8** instalada em `C:\Program Files\Epic Games\UE_5.8`.
-- **Visual Studio Build Tools 2022** instalado em `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`, com:
-  - Workload **"Desktop development with C++"** (traz MSVC v143 + Windows SDK). *Não* existe workload "Game development with C++" na SKU Build Tools (só na Community/Professional completas) — não perder tempo tentando instalar essa.
+- **Visual Studio Build Tools 2022** em `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`, com:
+  - Workload **"Desktop development with C++"** (MSVC v143 + Windows SDK). *Não* existe workload "Game development with C++" na SKU Build Tools (só nas edições Community/Professional) — não perder tempo tentando instalar essa.
   - Componente individual **.NET Framework 4.8.1 SDK** — obrigatório à parte, senão o UnrealBuildTool falha com `Unable to instantiate module 'SwarmInterface': Could not find NetFxSDK install dir`.
-- Editor de código usado: **Cursor** (baseado em VS Code). Ele só edita texto — quem compila é o MSVC via linha de comando ou via o próprio editor da Unreal.
+- Editor de código: **Cursor** (baseado em VS Code). Ele só edita texto — quem compila é o MSVC via linha de comando ou o próprio editor da Unreal.
 
-## Repositório e branch
+## Repositório
 
-- Repo local: `C:\Users\cauad\Desktop\dev\jogao` (sem remote configurado — só local).
-- Todo o trabalho de código está na branch `flight-prototype`, feita numa worktree em `C:\Users\cauad\Desktop\dev\jogao\.worktrees\flight-prototype`.
-- **Se for continuar de outra conta/máquina:** a branch `flight-prototype` já existe no histórico do git (`git log flight-prototype` mostra os commits abaixo). Não precisa recriar a worktree do zero — ou dá `git worktree add` de novo apontando pra essa branch, ou só faz `git checkout flight-prototype` direto se preferir trabalhar sem worktree.
-- Histórico de commits da branch (mais recente primeiro):
-  ```
-  68e8da1 feat: add PlanePawn wiring flight physics to actor movement and input
-  89b4e65 fix: give FFlightPhysics a default constructor for UHT vtable-helper compatibility
-  47f3026 feat: scaffold Unreal project with compiling editor target
-  8d812d9 Ignore Unreal build output and standalone test binaries
-  f287875 feat: add pure flight physics module with standalone tests
-  ee177e3 Ignore local worktrees directory
-  ecd0b57 Add implementation plan for Phase 1 flight prototype
-  9bb5ff0 Add design spec for futebol de aviao game
-  ```
+- Repo local: `C:\Users\cauad\Desktop\dev\jogao`.
+- **Remote:** `https://github.com/di0rio/mudarnomeainda.git` (`origin`). *(Versões anteriores deste doc diziam que não havia remote — estava errado.)*
+- Todo o trabalho da Fase 1 está na `master`. A branch `flight-prototype` e a worktree em `.worktrees/` foram removidas depois do merge — não existem mais.
+- O remote ainda tem `refs/heads/flight-prototype` apontando pra um commit antigo; a `master` local está à frente do `origin/master` e ainda não foi pushada.
 
-## Status das tasks (plano de Fase 1)
+## Status das tasks (Fase 1)
 
 | Task | Status | Commit |
 |---|---|---|
-| Task 1 — Física de voo pura + testes standalone | ✅ Feito, testes passando | `f287875` |
-| Fix — construtor padrão em `FFlightPhysics` (necessário pro UHT) | ✅ Feito | `89b4e65` |
-| Task 2 — Scaffold do projeto Unreal (compila) | ✅ Feito, build "Succeeded" | `47f3026` |
-| Task 3 — `APlanePawn` (liga física + input + câmera) | ✅ Feito, build "Succeeded" | `68e8da1` |
-| Task 4 — Nível de teste + playtest manual | ⏳ **Pendente** — só dá pra fazer na interface gráfica do editor |
+| Task 1 — Física de voo pura + testes standalone | ✅ | `f287875` |
+| Fix — construtor padrão em `FFlightPhysics` (necessário pro UHT) | ✅ | `89b4e65` |
+| Task 2 — Scaffold do projeto Unreal (compila) | ✅ | `47f3026` |
+| Task 3 — `APlanePawn` (liga física + input + câmera) | ✅ | `68e8da1` |
+| Task 4 — Nível de teste + playtest manual | ✅ | `fb66dc6` |
+
+### Como a Task 4 foi feita (importante)
+
+O plano original dizia que criar o `.umap` exigia a GUI do editor. **Não exige.** O nível é gerado headless por um commandlet Python:
+
+```bash
+"C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" \
+  "C:\Users\cauad\Desktop\dev\jogao\FutebolAviao.uproject" \
+  -run=pythonscript \
+  -script="C:\Users\cauad\Desktop\dev\jogao\Tools\LevelBuilder\BuildTestFlightMap.py" \
+  -unattended -nosplash -nop4
+```
+
+O script (`Tools/LevelBuilder/BuildTestFlightMap.py`) cria `Content/Maps/TestFlightMap.umap` com chão 400×400, DirectionalLight, SkyLight, SkyAtmosphere e PlayerStart em Z=500. É idempotente — rodar de novo recria o nível do zero.
+
+Dois detalhes de design que valem manter:
+- O nível é criado com `new_level(path, bIsPartitionedWorld=False)`. **Sem World Partition de propósito:** sai um `.umap` único de ~17 KB em vez de uma árvore `__ExternalActors__` com dezenas de arquivos, o que é muito mais sadio de versionar.
+- `PythonScriptPlugin` e `EditorScriptingUtilities` estão habilitados no `.uproject` com `"TargetAllowList": ["Editor"]` — não entram em build de jogo.
 
 ## Gotchas resolvidos (não repetir)
 
-1. **`winget install ... --override "--add Microsoft.VisualStudio.Workload.NativeGame"`** não funciona na SKU Build Tools — esse workload não existe nela. Usar `Microsoft.VisualStudio.Workload.NativeDesktop` (ou simplesmente instalar via GUI marcando "Desktop development with C++").
-2. **`winget install` num pacote já instalado não reaplica `--override`** a não ser que use `--force` junto — senão ele vê "already installed" e não faz nada.
-3. **NetFxSDK ausente:** erro `Could not find NetFxSDK install dir` ao compilar `FutebolAviaoEditor`. Resolvido instalando o componente individual **.NET Framework 4.8.1 SDK** pelo Visual Studio Installer (aba "Individual components", buscar ".NET Framework").
-4. **"Unable to build while Live Coding is active":** se o Unreal Editor estiver aberto (mesmo minimizado), a build por linha de comando (`Build.bat`) falha. Fechar o `UnrealEditor.exe`/`LiveCodingConsole.exe` antes de compilar via terminal.
-5. **`vswhere.exe` not recognized** ao chamar `VsDevCmd.bat`: não afeta o resultado, é só um aviso — o `vcvarsall.bat`/`cl.exe` funcionam normalmente mesmo com esse erro aparecendo. Preferir chamar `vcvars64.bat` direto (mais simples que `VsDevCmd.bat`).
-6. **`FFlightPhysics` sem construtor padrão** quebrava a compilação do `APlanePawn` com `error C2512: no appropriate default constructor available`, porque o UHT gera um "vtable-helper constructor" pra classes `UCLASS` que exige que todo membro C++ comum (não-UPROPERTY) seja default-construtível. Corrigido adicionando `FFlightPhysics() : Params() {}` em `FlightPhysics.h`.
+1. **`winget install ... --override "--add Microsoft.VisualStudio.Workload.NativeGame"`** não funciona na SKU Build Tools — esse workload não existe nela. Usar `Microsoft.VisualStudio.Workload.NativeDesktop` (ou instalar via GUI marcando "Desktop development with C++").
+2. **`winget install` num pacote já instalado não reaplica `--override`** a não ser que use `--force` junto.
+3. **NetFxSDK ausente:** erro `Could not find NetFxSDK install dir` ao compilar `FutebolAviaoEditor`. Resolvido instalando o componente **.NET Framework 4.8.1 SDK** pelo Visual Studio Installer ("Individual components" → buscar ".NET Framework").
+4. **"Unable to build while Live Coding is active":** se o Unreal Editor estiver aberto (mesmo minimizado), `Build.bat` falha. Fechar `UnrealEditor.exe`/`LiveCodingConsole.exe` antes de compilar via terminal. O mesmo vale pra rodar commandlets — o editor aberto segura o projeto.
+5. **`vswhere.exe` not recognized** ao chamar `vcvars64.bat`: é só um aviso, o `cl.exe` funciona normalmente.
+6. **`FFlightPhysics` sem construtor padrão** quebrava a compilação do `APlanePawn` com `error C2512: no appropriate default constructor available` — o UHT gera um "vtable-helper constructor" pra classes `UCLASS` que exige todo membro C++ comum (não-UPROPERTY) default-construtível. Corrigido com `FFlightPhysics() : Params() {}`.
+7. **Git Bash converte caminhos `/Game/...`** em caminhos Windows (`C:\Program Files\Git\Game\...`) ao passar pra executáveis. Ao passar paths de asset da Unreal pela linha de comando no Git Bash, prefixar com `MSYS_NO_PATHCONV=1`.
+8. **Docstring Python com caminhos Windows:** `"""... C:\Users ..."""` estoura `SyntaxError: truncated \UXXXXXXXX escape`. Usar raw string (`r"""..."""`).
+9. **Diretório da worktree não deletava** ("Device or resource busy") mesmo com o editor fechado: eram processos `EOSOverlayRenderer-Win64-Shipping` órfãos, deixados pra trás pelas sessões do editor. Matar esses processos libera o diretório.
 
 ## Comandos de build que funcionam (confirmados nesta máquina)
 
-**Compilar e rodar os testes standalone da física de voo** (não depende da Unreal, só do MSVC):
+**Testes standalone da física de voo** (não depende da Unreal, só do MSVC):
 ```bash
-cmd /c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && cd /d "C:\Users\cauad\Desktop\dev\jogao\.worktrees\flight-prototype" && cl /EHsc /std:c++17 /Fe:Tools\FlightPhysicsTests\FlightPhysicsTests.exe Tools\FlightPhysicsTests\FlightPhysicsTests.cpp Source\FutebolAviao\Flight\FlightPhysics.cpp && Tools\FlightPhysicsTests\FlightPhysicsTests.exe'
+cmd /c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && cd /d "C:\Users\cauad\Desktop\dev\jogao" && cl /nologo /EHsc /std:c++17 /Fe:Tools\FlightPhysicsTests\FlightPhysicsTests.exe Tools\FlightPhysicsTests\FlightPhysicsTests.cpp Source\FutebolAviao\Flight\FlightPhysics.cpp && Tools\FlightPhysicsTests\FlightPhysicsTests.exe'
+```
+Esperado: 6 testes, `All tests passed`.
+
+**Compilar o editor do jogo** (fechar o Unreal Editor antes):
+```bash
+"C:\Program Files\Epic Games\UE_5.8\Engine\Build\BatchFiles\Build.bat" FutebolAviaoEditor Win64 Development -Project="C:\Users\cauad\Desktop\dev\jogao\FutebolAviao.uproject" -WaitMutex
 ```
 
-**Compilar o editor do jogo** (fechar o Unreal Editor antes, se estiver aberto):
-```bash
-"C:\Program Files\Epic Games\UE_5.8\Engine\Build\BatchFiles\Build.bat" FutebolAviaoEditor Win64 Development -Project="C:\Users\cauad\Desktop\dev\jogao\.worktrees\flight-prototype\FutebolAviao.uproject" -WaitMutex
-```
+## Ajustar a sensação de voo
 
-Ambos rodaram do diretório da worktree (`C:\Users\cauad\Desktop\dev\jogao\.worktrees\flight-prototype`) — ajustar o caminho se estiver rodando de outro checkout.
+Todos os números ficam em `FFlightPhysicsParams` (`Source/FutebolAviao/Flight/FlightPhysics.h`), isolados do resto do código:
 
-## Task 4 — o que falta (só via editor gráfico)
+| Campo | Default |
+|---|---|
+| `Acceleration` | 2000 |
+| `Deceleration` | 1500 |
+| `Drag` | 300 |
+| `MaxSpeed` | 6000 |
+| `MinSpeed` | 0 |
+| `PitchRateDegPerSec` | 60 |
+| `YawRateDegPerSec` | 90 |
+| `RollRateDegPerSec` | 120 |
+| `MaxPitchDeg` | 85 |
 
-1. Abrir `FutebolAviao.uproject` (duplo clique, ou `UnrealEditor.exe "<caminho>\FutebolAviao.uproject"`). Confirmar compilação de módulos se perguntado.
-2. **File > New Level** → template "Basic". Adicionar um `PlayerStart` numa altura razoável (ex: Z = 500) pra começar já no ar. Salvar como `Content/Maps/TestFlightMap.umap`.
-3. **Edit > Project Settings > Maps & Modes:** setar "Editor Startup Map" e "Game Default Map" para `TestFlightMap`. Confirmar que "Default GameMode" já mostra `FutebolAviaoGameModeBase` (herdado do `DefaultEngine.ini`).
-4. Apertar **Play** (Alt+P) e testar:
-   - `W` acelera, `S` desacelera/freia.
-   - Mouse (X/Y) vira o nariz do avião (yaw/pitch).
-   - `A`/`D` rola o avião (roll).
-   - Câmera (spring arm) segue atrás do avião sem travar.
-5. Commit final da Task 4:
-   ```bash
-   git add Content/Maps/TestFlightMap.umap Config/DefaultEngine.ini
-   git commit -m "feat: add test flight level as project default map"
-   ```
+Mexer aqui é seguro — os testes em `Tools/FlightPhysicsTests/` setam os próprios params, então não quebram quando os defaults mudam.
 
-## Depois da Task 4
+## Próximo passo
 
-Fase 1 completa = protótipo de voo em mãos. Ajustar sensação de voo (aceleração, velocidade máxima, taxas de rotação) editando os defaults em `FFlightPhysicsParams` (`Source/FutebolAviao/Flight/FlightPhysics.h`) — isolado do resto do código, seguro de mexer sem quebrar nada.
-
-Próxima fase (Fase 2 — combustível + boost) ainda não tem plano escrito; a spec já cobre o design dela (ver seção "Mecânicas centrais" e "Fases de desenvolvimento" em `docs/superpowers/specs/2026-09-05-futebol-aviao-design.md"). Ao retomar, invocar a skill `writing-plans` de novo pra gerar o plano da Fase 2 antes de codar.
+**Fase 2 — combustível + boost.** Ainda não tem plano escrito; a spec já cobre o design (seções "Mecânicas centrais" e "Fases de desenvolvimento" em `docs/superpowers/specs/2026-09-05-futebol-aviao-design.md`). Ao retomar, invocar a skill `writing-plans` pra gerar o plano da Fase 2 antes de codar.
