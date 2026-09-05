@@ -83,10 +83,10 @@ Todos os números ficam em `FFlightPhysicsParams` (`Source/FutebolAviao/Flight/F
 | Campo | Default | Por que esse valor |
 |---|---|---|
 | `Acceleration` | 2600 | 0 -> velocidade maxima em ~2.3s |
-| `Deceleration` | 2200 | `S` freia de verdade: maxima -> piso em ~2s |
+| `Deceleration` | 2200 | `S` freia de verdade: maxima -> parado em ~2.7s |
 | `Drag` | 700 | soltar o acelerador desacelera em ~6.5s (era 15s) |
 | `MaxSpeed` | 6000 | 60 m/s |
-| `MinSpeed` | 1400 | piso de cruzeiro: o aviao nunca para no ar |
+| `MinSpeed` | 0 | sem piso. Tentei 1400 ("aviao nunca para no ar") e o playtest reprovou: o aviao saia voando sozinho no Play, sem input. Se um dia voltar, tem que vir junto com o aviao nascendo ja em movimento de proposito. |
 | `PitchRateDegPerSec` | 110 | |
 | `YawRateDegPerSec` | 110 | igual ao pitch, pra mirar em 3D ficar simetrico |
 | `RollRateDegPerSec` | 200 | roll e cosmetico (ver abaixo), mas mole demais lia como travado |

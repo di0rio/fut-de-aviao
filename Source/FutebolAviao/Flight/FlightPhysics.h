@@ -3,10 +3,10 @@
 struct FFlightPhysicsParams
 {
 	float Acceleration = 2600.f;  // 0 -> maxima em ~2.3s
-	float Deceleration = 2200.f;  // S freia de verdade: maxima -> piso em ~2s
+	float Deceleration = 2200.f;  // S freia de verdade: maxima -> parado em ~2.7s
 	float Drag = 700.f;           // soltar o acelerador desacelera em ~6.5s, nao 15s
 	float MaxSpeed = 6000.f;
-	float MinSpeed = 1400.f;   // piso de cruzeiro: o aviao nunca para no ar
+	float MinSpeed = 0.f;         // sem piso: o aviao so anda se voce acelerar
 	float PitchRateDegPerSec = 110.f;
 	float YawRateDegPerSec = 110.f;  // igual ao pitch: mirar em 3D fica simetrico
 	float RollRateDegPerSec = 200.f;
