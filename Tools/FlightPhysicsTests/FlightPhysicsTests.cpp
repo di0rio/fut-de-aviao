@@ -11,6 +11,7 @@ static bool NearlyEqual(float A, float B, float Tolerance = 0.01f)
 static void Test_ThrottleAcceleratesSpeed()
 {
 	FFlightPhysicsParams Params;
+	Params.MinSpeed = 0.f; // isola o teste do piso de cruzeiro
 	Params.Acceleration = 1000.f;
 	Params.MaxSpeed = 10000.f;
 	FFlightPhysics Physics(Params);
@@ -25,6 +26,7 @@ static void Test_ThrottleAcceleratesSpeed()
 static void Test_SpeedClampsToMaxSpeed()
 {
 	FFlightPhysicsParams Params;
+	Params.MinSpeed = 0.f; // isola o teste do piso de cruzeiro
 	Params.Acceleration = 100000.f;
 	Params.MaxSpeed = 500.f;
 	FFlightPhysics Physics(Params);
@@ -39,6 +41,7 @@ static void Test_SpeedClampsToMaxSpeed()
 static void Test_NoThrottleAppliesDrag()
 {
 	FFlightPhysicsParams Params;
+	Params.MinSpeed = 0.f; // isola o teste do piso de cruzeiro
 	Params.Drag = 200.f;
 	FFlightPhysics Physics(Params);
 	FFlightPhysicsState State;
@@ -53,6 +56,7 @@ static void Test_NoThrottleAppliesDrag()
 static void Test_SpeedNeverGoesNegativeFromDrag()
 {
 	FFlightPhysicsParams Params;
+	Params.MinSpeed = 0.f; // isola o teste do piso de cruzeiro
 	Params.Drag = 200.f;
 	FFlightPhysics Physics(Params);
 	FFlightPhysicsState State;
@@ -90,6 +94,23 @@ static void Test_YawInputWrapsAround360()
 	printf("Test_YawInputWrapsAround360 passed\n");
 }
 
+static void Test_DefaultParamsKeepPlaneAboveStallSpeed()
+{
+	// Contrato de sensacao: com os defaults, soltar o acelerador desacelera o
+	// aviao mas nunca o deixa parar no ar. Aviao que para de voar nao e aviao.
+	FFlightPhysics Physics((FFlightPhysicsParams()));
+	FFlightPhysicsState State;
+	State.Speed = 6000.f;
+
+	for (int i = 0; i < 600; ++i)
+	{
+		Physics.Update(State, 0.f, 0.f, 0.f, 0.f, 0.1f); // 60 segundos sem acelerador
+	}
+
+	assert(State.Speed >= 1000.f);
+	printf("Test_DefaultParamsKeepPlaneAboveStallSpeed passed\n");
+}
+
 int main()
 {
 	Test_ThrottleAcceleratesSpeed();
@@ -98,6 +119,7 @@ int main()
 	Test_SpeedNeverGoesNegativeFromDrag();
 	Test_PitchInputRotatesNoseAndClamps();
 	Test_YawInputWrapsAround360();
+	Test_DefaultParamsKeepPlaneAboveStallSpeed();
 	printf("All tests passed\n");
 	return 0;
 }

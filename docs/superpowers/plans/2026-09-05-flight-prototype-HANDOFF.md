@@ -19,7 +19,7 @@ Referências:
 ## Repositório
 
 - Repo local: `C:\Users\cauad\Desktop\dev\jogao`.
-- **Remote:** `https://github.com/di0rio/mudarnomeainda.git` (`origin`). *(Versões anteriores deste doc diziam que não havia remote — estava errado.)*
+- **Remote:** `https://github.com/di0rio/fut-de-aviao.git` (`origin`). *(Versões anteriores deste doc diziam que não havia remote — estava errado. O repo foi renomeado de `mudarnomeainda` para `fut-de-aviao`; o nome do projeto/módulo Unreal continua `FutebolAviao`.)*
 - Todo o trabalho da Fase 1 está na `master`. A branch `flight-prototype` e a worktree em `.worktrees/` foram removidas depois do merge — não existem mais.
 - O remote ainda tem `refs/heads/flight-prototype` apontando pra um commit antigo; a `master` local está à frente do `origin/master` e ainda não foi pushada.
 
@@ -80,17 +80,19 @@ Esperado: 6 testes, `All tests passed`.
 
 Todos os números ficam em `FFlightPhysicsParams` (`Source/FutebolAviao/Flight/FlightPhysics.h`), isolados do resto do código:
 
-| Campo | Default |
-|---|---|
-| `Acceleration` | 2000 |
-| `Deceleration` | 1500 |
-| `Drag` | 300 |
-| `MaxSpeed` | 6000 |
-| `MinSpeed` | 0 |
-| `PitchRateDegPerSec` | 60 |
-| `YawRateDegPerSec` | 90 |
-| `RollRateDegPerSec` | 120 |
-| `MaxPitchDeg` | 85 |
+| Campo | Default | Por que esse valor |
+|---|---|---|
+| `Acceleration` | 2600 | 0 -> velocidade maxima em ~2.3s |
+| `Deceleration` | 2200 | `S` freia de verdade: maxima -> piso em ~2s |
+| `Drag` | 700 | soltar o acelerador desacelera em ~6.5s (era 15s) |
+| `MaxSpeed` | 6000 | 60 m/s |
+| `MinSpeed` | 1400 | piso de cruzeiro: o aviao nunca para no ar |
+| `PitchRateDegPerSec` | 110 | |
+| `YawRateDegPerSec` | 110 | igual ao pitch, pra mirar em 3D ficar simetrico |
+| `RollRateDegPerSec` | 200 | roll e cosmetico (ver abaixo), mas mole demais lia como travado |
+| `MaxPitchDeg` | 85 | trava antes dos 90 pra evitar gimbal flip |
+
+**Roll e puramente visual.** `Update` guarda pitch/yaw/roll como angulos absolutos de mundo, e `APlanePawn` usa `FRotator(...).Vector()` pra achar o "pra frente" — e `Vector()` ignora roll. Entao `A`/`D` giram o desenho do aviao sem mudar pra onde ele voa. Isso e coerente com a spec, que lista os controles de direcao como "guinada/inclinacao" (yaw + pitch) e nao menciona roll. Se um dia a curva classica de aviao (inclinar + puxar o nariz) virar requisito, ai sim o modelo de rotacao precisa virar relativo ao corpo.
 
 Mexer aqui é seguro — os testes em `Tools/FlightPhysicsTests/` setam os próprios params, então não quebram quando os defaults mudam.
 
