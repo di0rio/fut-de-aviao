@@ -134,6 +134,101 @@ static void Test_CanBoostIsFalseWhileDestroyedOrEmpty()
 	printf("Test_CanBoostIsFalseWhileDestroyedOrEmpty passed\n");
 }
 
+static void Test_FuelDoesNotRegenerateWhileDestroyed()
+{
+	// O teste de respawn existente nunca checa o combustivel durante os frames
+	// destruidos, e o valor final e escrito pela atribuicao do respawn, o que
+	// mascara qualquer vazamento de regen enquanto o aviao esta fora da jogada.
+	FFuelParams Params;
+	Params.RespawnSeconds = 100.f;
+	Params.PassiveRegenPerSec = 500.f;
+	Params.RegenDelayAfterBoostSec = 0.f;
+	FFuelSystem Fuel(Params);
+	FFuelState State;
+	State.Fuel = 0.f;
+	State.bIsDestroyed = true;
+	State.RespawnTimer = 100.f;
+
+	Fuel.Update(State, false, 1.f);
+	Fuel.Update(State, false, 1.f);
+	Fuel.Update(State, false, 1.f);
+
+	assert(State.bIsDestroyed);
+	assert(NearlyEqual(State.Fuel, 0.f));
+	printf("Test_FuelDoesNotRegenerateWhileDestroyed passed\n");
+}
+
+static void Test_RespawnResetsPostBoostRegenDelay()
+{
+	// TimeSinceBoostSec precisa voltar a 0 no respawn: sem isso o regen nao
+	// respeitaria o RegenDelayAfterBoostSec logo apos o aviao voltar a jogada.
+	FFuelParams Params;
+	Params.TankCapacity = 100.f;
+	Params.BoostDrainPerSec = 25.f;
+	Params.RespawnSeconds = 3.f;
+	Params.RespawnFuelFraction = 0.5f;
+	FFuelSystem Fuel(Params);
+	FFuelState State;
+	State.Fuel = 10.f;
+
+	Fuel.Update(State, true, 1.f);   // esvazia o tanque, destroi, zera o relogio de boost
+	assert(State.bIsDestroyed);
+
+	Fuel.Update(State, false, 3.f);  // deixa o timer de respawn zerar
+
+	assert(!State.bIsDestroyed);
+	assert(NearlyEqual(State.TimeSinceBoostSec, 0.f));
+	printf("Test_RespawnResetsPostBoostRegenDelay passed\n");
+}
+
+static void Test_BoostHeldThroughRespawnDoesNotLoop()
+{
+	// Teste de regressao do Fix 1, na camada pura via ResolveBoost.
+	FFuelParams Params;
+	Params.TankCapacity = 50.f;
+	Params.BoostDrainPerSec = 25.f;
+	Params.RespawnSeconds = 3.f;
+	Params.RespawnFuelFraction = 1.f;
+	FFuelSystem Fuel(Params);
+	FFuelState State;
+	State.Fuel = 50.f;
+
+	// Boost segurado ate destruir (2s de dreno a 25/s esvazia os 50 de tanque).
+	bool bBoostRequested = true;
+	for (int i = 0; i < 2; ++i)
+	{
+		const bool bBoostActive = Fuel.ResolveBoost(State, bBoostRequested);
+		Fuel.Update(State, bBoostActive, 1.f);
+	}
+	assert(State.bIsDestroyed);
+
+	// Atravessa a janela de respawn com o input de boost ainda "segurado".
+	while (State.bIsDestroyed)
+	{
+		const bool bBoostActive = Fuel.ResolveBoost(State, bBoostRequested);
+		Fuel.Update(State, bBoostActive, 1.f);
+	}
+	assert(!State.bIsDestroyed);
+	assert(NearlyEqual(State.Fuel, 50.f));
+
+	// METADE DO BUG: se o pawn nao limpasse bBoostInput (bBoostRequested continua
+	// true aqui, como na versao com defeito), ResolveBoost volta a engatar o boost
+	// no primeiro frame pos-respawn porque CanBoost ja e true de novo.
+	assert(Fuel.ResolveBoost(State, bBoostRequested));
+
+	// METADE DO FIX: o pawn agora zera bBoostInput no respawn (Fix 1). Com o
+	// pedido limpo, o boost nao reengata sozinho e o combustivel nao e drenado
+	// de novo -> sem loop de morte.
+	bBoostRequested = false;
+	const bool bBoostActiveAfterFix = Fuel.ResolveBoost(State, bBoostRequested);
+	assert(!bBoostActiveAfterFix);
+	Fuel.Update(State, bBoostActiveAfterFix, 1.f);
+
+	assert(!State.bIsDestroyed);
+	assert(NearlyEqual(State.Fuel, 50.f));
+	printf("Test_BoostHeldThroughRespawnDoesNotLoop passed\n");
+}
+
 int main()
 {
 	Test_BoostDrainsFuel();
@@ -143,6 +238,9 @@ int main()
 	Test_EmptyTankDestroysThePlane();
 	Test_PlaneRespawnsWithHalfTankAfterTimer();
 	Test_CanBoostIsFalseWhileDestroyedOrEmpty();
+	Test_FuelDoesNotRegenerateWhileDestroyed();
+	Test_RespawnResetsPostBoostRegenDelay();
+	Test_BoostHeldThroughRespawnDoesNotLoop();
 	printf("All tests passed\n");
 	return 0;
 }
