@@ -1,5 +1,15 @@
 #include "FuelSystem.h"
 
+namespace
+{
+	float ClampValue(float Value, float Min, float Max)
+	{
+		if (Value < Min) return Min;
+		if (Value > Max) return Max;
+		return Value;
+	}
+}
+
 void FFuelSystem::Update(FFuelState& State, bool bBoostInput, float DeltaSeconds) const
 {
 	if (bBoostInput)
@@ -15,6 +25,8 @@ void FFuelSystem::Update(FFuelState& State, bool bBoostInput, float DeltaSeconds
 			State.Fuel += Params.PassiveRegenPerSec * DeltaSeconds;
 		}
 	}
+
+	State.Fuel = ClampValue(State.Fuel, 0.f, Params.TankCapacity);
 }
 
 bool FFuelSystem::CanBoost(const FFuelState& State) const

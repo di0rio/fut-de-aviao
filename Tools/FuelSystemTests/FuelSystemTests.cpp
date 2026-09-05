@@ -56,11 +56,28 @@ static void Test_RegenIsSuppressedRightAfterBoosting()
 	printf("Test_RegenIsSuppressedRightAfterBoosting passed\n");
 }
 
+static void Test_FuelNeverExceedsTankCapacity()
+{
+	FFuelParams Params;
+	Params.TankCapacity = 100.f;
+	Params.PassiveRegenPerSec = 500.f;
+	Params.RegenDelayAfterBoostSec = 0.f;
+	FFuelSystem Fuel(Params);
+	FFuelState State;
+	State.Fuel = 90.f;
+
+	Fuel.Update(State, false, 1.f);
+
+	assert(NearlyEqual(State.Fuel, 100.f));
+	printf("Test_FuelNeverExceedsTankCapacity passed\n");
+}
+
 int main()
 {
 	Test_BoostDrainsFuel();
 	Test_NotBoostingRegeneratesFuel();
 	Test_RegenIsSuppressedRightAfterBoosting();
+	Test_FuelNeverExceedsTankCapacity();
 	printf("All tests passed\n");
 	return 0;
 }
