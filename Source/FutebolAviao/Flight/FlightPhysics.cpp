@@ -18,14 +18,18 @@ namespace
 	}
 }
 
-void FFlightPhysics::Update(FFlightPhysicsState& State, float ThrottleInput, float PitchInput, float YawInput, float RollInput, float DeltaSeconds) const
+void FFlightPhysics::Update(FFlightPhysicsState& State, float ThrottleInput, float PitchInput, float YawInput, float RollInput, bool bBoostActive, float DeltaSeconds) const
 {
 	ThrottleInput = ClampValue(ThrottleInput, -1.f, 1.f);
 	PitchInput = ClampValue(PitchInput, -1.f, 1.f);
 	YawInput = ClampValue(YawInput, -1.f, 1.f);
 	RollInput = ClampValue(RollInput, -1.f, 1.f);
 
-	if (ThrottleInput > 0.f)
+	if (bBoostActive)
+	{
+		State.Speed += Params.BoostAcceleration * DeltaSeconds;
+	}
+	else if (ThrottleInput > 0.f)
 	{
 		State.Speed += Params.Acceleration * ThrottleInput * DeltaSeconds;
 	}
@@ -38,7 +42,9 @@ void FFlightPhysics::Update(FFlightPhysicsState& State, float ThrottleInput, flo
 		State.Speed -= Params.Drag * DeltaSeconds;
 	}
 
-	State.Speed = ClampValue(State.Speed, Params.MinSpeed, Params.MaxSpeed);
+	// Fora do boost o teto e a maxima normal; o excesso ganho em boost e cortado.
+	const float SpeedCeiling = bBoostActive ? Params.BoostMaxSpeed : Params.MaxSpeed;
+	State.Speed = ClampValue(State.Speed, Params.MinSpeed, SpeedCeiling);
 
 	State.PitchDeg = ClampValue(State.PitchDeg + PitchInput * Params.PitchRateDegPerSec * DeltaSeconds, -Params.MaxPitchDeg, Params.MaxPitchDeg);
 	State.YawDeg = WrapDegrees(State.YawDeg + YawInput * Params.YawRateDegPerSec * DeltaSeconds);

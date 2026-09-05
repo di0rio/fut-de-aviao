@@ -17,7 +17,7 @@ static void Test_ThrottleAcceleratesSpeed()
 	FFlightPhysics Physics(Params);
 	FFlightPhysicsState State;
 
-	Physics.Update(State, /*Throttle*/ 1.f, 0.f, 0.f, 0.f, /*DeltaSeconds*/ 1.f);
+	Physics.Update(State, /*Throttle*/ 1.f, 0.f, 0.f, 0.f, /*bBoostActive*/ false, /*DeltaSeconds*/ 1.f);
 
 	assert(NearlyEqual(State.Speed, 1000.f));
 	printf("Test_ThrottleAcceleratesSpeed passed\n");
@@ -32,7 +32,7 @@ static void Test_SpeedClampsToMaxSpeed()
 	FFlightPhysics Physics(Params);
 	FFlightPhysicsState State;
 
-	Physics.Update(State, 1.f, 0.f, 0.f, 0.f, 1.f);
+	Physics.Update(State, 1.f, 0.f, 0.f, 0.f, false, 1.f);
 
 	assert(NearlyEqual(State.Speed, 500.f));
 	printf("Test_SpeedClampsToMaxSpeed passed\n");
@@ -47,7 +47,7 @@ static void Test_NoThrottleAppliesDrag()
 	FFlightPhysicsState State;
 	State.Speed = 1000.f;
 
-	Physics.Update(State, 0.f, 0.f, 0.f, 0.f, 1.f);
+	Physics.Update(State, 0.f, 0.f, 0.f, 0.f, false, 1.f);
 
 	assert(NearlyEqual(State.Speed, 800.f));
 	printf("Test_NoThrottleAppliesDrag passed\n");
@@ -62,7 +62,7 @@ static void Test_SpeedNeverGoesNegativeFromDrag()
 	FFlightPhysicsState State;
 	State.Speed = 50.f;
 
-	Physics.Update(State, 0.f, 0.f, 0.f, 0.f, 1.f);
+	Physics.Update(State, 0.f, 0.f, 0.f, 0.f, false, 1.f);
 
 	assert(NearlyEqual(State.Speed, 0.f));
 	printf("Test_SpeedNeverGoesNegativeFromDrag passed\n");
@@ -76,7 +76,7 @@ static void Test_PitchInputRotatesNoseAndClamps()
 	FFlightPhysics Physics(Params);
 	FFlightPhysicsState State;
 
-	Physics.Update(State, 0.f, 1.f, 0.f, 0.f, 1.f); // 90 deg pedido, clampa em 85
+	Physics.Update(State, 0.f, 1.f, 0.f, 0.f, false, 1.f); // 90 deg pedido, clampa em 85
 	assert(NearlyEqual(State.PitchDeg, 85.f));
 	printf("Test_PitchInputRotatesNoseAndClamps passed\n");
 }
@@ -89,9 +89,26 @@ static void Test_YawInputWrapsAround360()
 	FFlightPhysicsState State;
 	State.YawDeg = 20.f;
 
-	Physics.Update(State, 0.f, 0.f, 1.f, 0.f, 1.f); // 20 + 350 = 370 -> wrap pra 10
+	Physics.Update(State, 0.f, 0.f, 1.f, 0.f, false, 1.f); // 20 + 350 = 370 -> wrap pra 10
 	assert(NearlyEqual(State.YawDeg, 10.f));
 	printf("Test_YawInputWrapsAround360 passed\n");
+}
+
+static void Test_BoostAcceleratesPastNormalMaxSpeed()
+{
+	FFlightPhysicsParams Params;
+	Params.MinSpeed = 0.f;
+	Params.MaxSpeed = 6000.f;
+	Params.BoostMaxSpeed = 9000.f;
+	Params.BoostAcceleration = 5000.f;
+	FFlightPhysics Physics(Params);
+	FFlightPhysicsState State;
+	State.Speed = 6000.f;
+
+	Physics.Update(State, 1.f, 0.f, 0.f, 0.f, /*bBoostActive*/ true, 1.f);
+
+	assert(NearlyEqual(State.Speed, 9000.f)); // 6000 + 5000 = 11000, clampado no teto do boost
+	printf("Test_BoostAcceleratesPastNormalMaxSpeed passed\n");
 }
 
 int main()
@@ -102,6 +119,7 @@ int main()
 	Test_SpeedNeverGoesNegativeFromDrag();
 	Test_PitchInputRotatesNoseAndClamps();
 	Test_YawInputWrapsAround360();
+	Test_BoostAcceleratesPastNormalMaxSpeed();
 	printf("All tests passed\n");
 	return 0;
 }
