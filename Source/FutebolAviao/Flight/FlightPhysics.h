@@ -15,9 +15,18 @@ struct FFlightPhysicsParams
 	float MaxPitchDeg = 85.f;
 };
 
+// Vetor proprio: esta classe nao pode incluir header da Unreal. O pawn converte
+// pra FVector na fronteira.
+struct FFlightVector
+{
+	float X = 0.f;
+	float Y = 0.f;
+	float Z = 0.f;
+};
+
 struct FFlightPhysicsState
 {
-	float Speed = 0.f;
+	FFlightVector Velocity;
 	float PitchDeg = 0.f;
 	float YawDeg = 0.f;
 	float RollDeg = 0.f;
@@ -32,6 +41,9 @@ public:
 
 	// ThrottleInput, PitchInput, YawInput, RollInput sao esperados no intervalo [-1, 1].
 	void Update(FFlightPhysicsState& State, float ThrottleInput, float PitchInput, float YawInput, float RollInput, bool bBoostActive, float DeltaSeconds) const;
+
+	// Velocidade escalar. O estado guarda vetor; isto e so a magnitude.
+	static float GetSpeed(const FFlightPhysicsState& State);
 
 private:
 	FFlightPhysicsParams Params;
