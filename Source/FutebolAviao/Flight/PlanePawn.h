@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "FlightPhysics.h"
+#include "FuelSystem.h"
 #include "PlanePawn.generated.h"
 
 class UStaticMeshComponent;
@@ -26,6 +27,8 @@ protected:
 	void HandlePitchInput(float Value);
 	void HandleYawInput(float Value);
 	void HandleRollInput(float Value);
+	void HandleBoostPressed();
+	void HandleBoostReleased();
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Plane")
@@ -39,6 +42,15 @@ private:
 
 	FFlightPhysics FlightPhysics;
 	FFlightPhysicsState FlightState;
+
+	FFuelSystem FuelSystem;
+	FFuelState FuelState;
+
+	// Transform capturado no BeginPlay: e pra ca que o aviao volta ao respawnar.
+	FTransform SpawnTransform;
+
+	bool bBoostInput = false;
+	bool bWasDestroyed = false;
 
 	float ThrottleInput = 0.f;
 	float PitchInput = 0.f;
