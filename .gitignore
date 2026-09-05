@@ -9,8 +9,8 @@ DerivedDataCache/
 *.VC.db
 *.vcxproj*
 
-# Standalone test build output (Tools/*Tests)
-Tools/**/*.obj
+# Standalone test build output (Tools/*Tests) and stray root-level objs from cl.exe
+*.obj
 Tools/**/*.exe
 Tools/**/*.pdb
 Tools/**/*.ilk
