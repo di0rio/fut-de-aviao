@@ -93,8 +93,7 @@ void APlanePawn::Tick(float DeltaSeconds)
 	const FRotator NewRotation(FlightState.PitchDeg, FlightState.YawDeg, FlightState.RollDeg);
 	SetActorRotation(NewRotation);
 
-	const FVector Forward = NewRotation.Vector();
-	AddActorWorldOffset(Forward * FlightState.Speed * DeltaSeconds, true);
+	AddActorWorldOffset(FVector(FlightState.Velocity.X, FlightState.Velocity.Y, FlightState.Velocity.Z) * DeltaSeconds, true);
 
 	// Sem HUD ainda: o combustivel aparece como texto de debug pra dar pra jogar a Task 4.
 #if !UE_BUILD_SHIPPING
@@ -104,7 +103,7 @@ void APlanePawn::Tick(float DeltaSeconds)
 		// literal fixo faz todos escreverem no mesmo slot e so um aparece.
 		const uint64 DebugKey = static_cast<uint64>(GetUniqueID());
 		GEngine->AddOnScreenDebugMessage(DebugKey, 0.05f, FColor::Yellow,
-			FString::Printf(TEXT("Fuel %.0f  Speed %.0f%s"), FuelState.Fuel, FlightState.Speed, bBoostActive ? TEXT("  BOOST") : TEXT("")));
+			FString::Printf(TEXT("Fuel %.0f  Speed %.0f%s"), FuelState.Fuel, FFlightPhysics::GetSpeed(FlightState), bBoostActive ? TEXT("  BOOST") : TEXT("")));
 	}
 #endif
 }
