@@ -178,6 +178,7 @@ struct FFlightPhysicsState
 class FFlightPhysics
 {
 public:
+	FFlightPhysics() : Params() {}
 	explicit FFlightPhysics(const FFlightPhysicsParams& InParams) : Params(InParams) {}
 
 	// ThrottleInput, PitchInput, YawInput, RollInput sao esperados no intervalo [-1, 1].
