@@ -38,13 +38,14 @@ void APlanePawn::BeginPlay()
 {
 	Super::BeginPlay();
 	SpawnTransform = GetActorTransform();
+	ResetFlightStateTo(SpawnTransform);
 }
 
 void APlanePawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	const bool bBoostActive = bBoostInput && FuelSystem.CanBoost(FuelState);
+	const bool bBoostActive = FuelSystem.ResolveBoost(FuelState, bBoostInput);
 	FuelSystem.Update(FuelState, bBoostActive, DeltaSeconds);
 
 	// Explodiu neste frame: some da arena e para de voar.
@@ -60,14 +61,21 @@ void APlanePawn::Tick(float DeltaSeconds)
 	{
 		bWasDestroyed = false;
 		SetActorTransform(SpawnTransform);
-		FlightState = FFlightPhysicsState();
+		ResetFlightStateTo(SpawnTransform);
 
-		// Zera os eixos: input segurado durante a explosao/respawn nao pode
-		// produzir um solavanco no primeiro frame de volta ao jogo.
+		// Os quatro eixos sao atribuidos (nao acumulados) pelos handlers de
+		// BindAxis, e o pawn ticka depois do PlayerController, entao eles ja
+		// guardam o valor atual do frame - zerar aqui e inocuo hoje, mas fica
+		// certo se o input for desabilitado enquanto o ator esta destruido.
+		// bBoostInput ja e outra historia: e orientado a evento (IE_Pressed/
+		// IE_Released) e nenhum Released dispara com o ator escondido, entao
+		// segurar o boost atravessa a morte inteira. Sem isto o aviao renasce
+		// ainda "boostando", reesvazia o tanque e reexplode em loop.
 		ThrottleInput = 0.f;
 		PitchInput = 0.f;
 		YawInput = 0.f;
 		RollInput = 0.f;
+		bBoostInput = false;
 
 		SetActorHiddenInGame(false);
 		SetActorEnableCollision(true);
@@ -87,11 +95,16 @@ void APlanePawn::Tick(float DeltaSeconds)
 	AddActorWorldOffset(Forward * FlightState.Speed * DeltaSeconds, true);
 
 	// Sem HUD ainda: o combustivel aparece como texto de debug pra dar pra jogar a Task 4.
+#if !UE_BUILD_SHIPPING
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::Yellow,
+		// Chave por pawn (nao um literal fixo): com quatro avioes locais, um
+		// literal fixo faz todos escreverem no mesmo slot e so um aparece.
+		const uint64 DebugKey = static_cast<uint64>(GetUniqueID());
+		GEngine->AddOnScreenDebugMessage(DebugKey, 0.05f, FColor::Yellow,
 			FString::Printf(TEXT("Fuel %.0f  Speed %.0f%s"), FuelState.Fuel, FlightState.Speed, bBoostActive ? TEXT("  BOOST") : TEXT("")));
 	}
+#endif
 }
 
 void APlanePawn::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -135,4 +148,18 @@ void APlanePawn::HandleBoostPressed()
 void APlanePawn::HandleBoostReleased()
 {
 	bBoostInput = false;
+}
+
+void APlanePawn::SetSpawnTransform(const FTransform& NewSpawnTransform)
+{
+	SpawnTransform = NewSpawnTransform;
+}
+
+void APlanePawn::ResetFlightStateTo(const FTransform& Transform)
+{
+	const FRotator Rotation = Transform.Rotator();
+	FlightState = FFlightPhysicsState();
+	FlightState.PitchDeg = Rotation.Pitch;
+	FlightState.YawDeg = Rotation.Yaw;
+	FlightState.RollDeg = Rotation.Roll;
 }

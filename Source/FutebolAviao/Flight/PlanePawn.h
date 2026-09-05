@@ -30,7 +30,17 @@ protected:
 	void HandleBoostPressed();
 	void HandleBoostReleased();
 
+public:
+	// A Fase 4 (2v2) vai querer que o GameMode escolha o spawn de cada time.
+	// Por enquanto o proprio BeginPlay define; isto e o gancho pra isso mudar.
+	UFUNCTION(BlueprintCallable, Category = "Plane")
+	void SetSpawnTransform(const FTransform& NewSpawnTransform);
+
 private:
+	// Zera o FlightState e o reancora na posicao e rotacao de Transform, usado
+	// tanto no spawn inicial quanto no respawn.
+	void ResetFlightStateTo(const FTransform& Transform);
+
 	UPROPERTY(VisibleAnywhere, Category = "Plane")
 	UStaticMeshComponent* MeshComponent;
 
@@ -46,7 +56,10 @@ private:
 	FFuelSystem FuelSystem;
 	FFuelState FuelState;
 
-	// Transform capturado no BeginPlay: e pra ca que o aviao volta ao respawnar.
+	// Transform pra onde o aviao volta ao respawnar. Capturado no BeginPlay por
+	// padrao, mas so a posicao e rotacao sao restauradas via ResetFlightStateTo -
+	// nao e um SetActorTransform completo. SetSpawnTransform deixa o GameMode
+	// substituir isto (spawn de time, Fase 4).
 	FTransform SpawnTransform;
 
 	bool bBoostInput = false;
