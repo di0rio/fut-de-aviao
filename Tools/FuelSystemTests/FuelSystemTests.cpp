@@ -38,10 +38,29 @@ static void Test_NotBoostingRegeneratesFuel()
 	printf("Test_NotBoostingRegeneratesFuel passed\n");
 }
 
+static void Test_RegenIsSuppressedRightAfterBoosting()
+{
+	FFuelParams Params;
+	Params.TankCapacity = 100.f;
+	Params.BoostDrainPerSec = 25.f;
+	Params.PassiveRegenPerSec = 8.f;
+	Params.RegenDelayAfterBoostSec = 1.5f;
+	FFuelSystem Fuel(Params);
+	FFuelState State;
+	State.Fuel = 50.f;
+
+	Fuel.Update(State, true, 1.f);    // gasta 25 -> 25 de combustivel, zera o relogio
+	Fuel.Update(State, false, 1.f);   // 1s < 1.5s de delay: nao pode regenerar ainda
+
+	assert(NearlyEqual(State.Fuel, 25.f));
+	printf("Test_RegenIsSuppressedRightAfterBoosting passed\n");
+}
+
 int main()
 {
 	Test_BoostDrainsFuel();
 	Test_NotBoostingRegeneratesFuel();
+	Test_RegenIsSuppressedRightAfterBoosting();
 	printf("All tests passed\n");
 	return 0;
 }
