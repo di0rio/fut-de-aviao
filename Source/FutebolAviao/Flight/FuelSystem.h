@@ -25,10 +25,14 @@ public:
 	FFuelSystem() : Params() {}
 	explicit FFuelSystem(const FFuelParams& InParams) : Params(InParams) {}
 
-	void Update(FFuelState& State, bool bBoostInput, float DeltaSeconds) const;
+	void Update(FFuelState& State, bool bBoostActive, float DeltaSeconds) const;
 
 	// True quando o aviao pode acelerar em boost agora: vivo e com combustivel.
 	bool CanBoost(const FFuelState& State) const;
+
+	// Resolve se o boost realmente engata neste frame. Fica aqui, e nao no pawn,
+	// porque a predicao de cliente da Fase 5 precisa rederivar isso sem a engine.
+	bool ResolveBoost(const FFuelState& State, bool bBoostRequested) const;
 
 private:
 	FFuelParams Params;

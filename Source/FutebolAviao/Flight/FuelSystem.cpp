@@ -10,7 +10,7 @@ namespace
 	}
 }
 
-void FFuelSystem::Update(FFuelState& State, bool bBoostInput, float DeltaSeconds) const
+void FFuelSystem::Update(FFuelState& State, bool bBoostActive, float DeltaSeconds) const
 {
 	// Destruido: nao consome, nao regenera, so espera o respawn.
 	if (State.bIsDestroyed)
@@ -26,7 +26,7 @@ void FFuelSystem::Update(FFuelState& State, bool bBoostInput, float DeltaSeconds
 		return;
 	}
 
-	if (bBoostInput)
+	if (bBoostActive)
 	{
 		State.Fuel -= Params.BoostDrainPerSec * DeltaSeconds;
 		State.TimeSinceBoostSec = 0.f;
@@ -52,4 +52,9 @@ void FFuelSystem::Update(FFuelState& State, bool bBoostInput, float DeltaSeconds
 bool FFuelSystem::CanBoost(const FFuelState& State) const
 {
 	return !State.bIsDestroyed && State.Fuel > 0.f;
+}
+
+bool FFuelSystem::ResolveBoost(const FFuelState& State, bool bBoostRequested) const
+{
+	return bBoostRequested && CanBoost(State);
 }
