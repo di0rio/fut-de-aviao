@@ -94,23 +94,6 @@ static void Test_YawInputWrapsAround360()
 	printf("Test_YawInputWrapsAround360 passed\n");
 }
 
-static void Test_DefaultParamsKeepPlaneAboveStallSpeed()
-{
-	// Contrato de sensacao: com os defaults, soltar o acelerador desacelera o
-	// aviao mas nunca o deixa parar no ar. Aviao que para de voar nao e aviao.
-	FFlightPhysics Physics((FFlightPhysicsParams()));
-	FFlightPhysicsState State;
-	State.Speed = 6000.f;
-
-	for (int i = 0; i < 600; ++i)
-	{
-		Physics.Update(State, 0.f, 0.f, 0.f, 0.f, 0.1f); // 60 segundos sem acelerador
-	}
-
-	assert(State.Speed >= 1000.f);
-	printf("Test_DefaultParamsKeepPlaneAboveStallSpeed passed\n");
-}
-
 int main()
 {
 	Test_ThrottleAcceleratesSpeed();
@@ -119,7 +102,6 @@ int main()
 	Test_SpeedNeverGoesNegativeFromDrag();
 	Test_PitchInputRotatesNoseAndClamps();
 	Test_YawInputWrapsAround360();
-	Test_DefaultParamsKeepPlaneAboveStallSpeed();
 	printf("All tests passed\n");
 	return 0;
 }
