@@ -111,6 +111,26 @@ static void Test_BoostAcceleratesPastNormalMaxSpeed()
 	printf("Test_BoostAcceleratesPastNormalMaxSpeed passed\n");
 }
 
+static void Test_BoostOverridesBrakeInput()
+{
+	// Decisao de design confirmada em playtest: boost e compromisso, o freio nao
+	// corta ele. Se algum dia mudar, este teste e o lugar de registrar a mudanca.
+	FFlightPhysicsParams Params;
+	Params.MinSpeed = 0.f;
+	Params.MaxSpeed = 6000.f;
+	Params.BoostMaxSpeed = 9000.f;
+	Params.BoostAcceleration = 5000.f;
+	Params.Deceleration = 2200.f;
+	FFlightPhysics Physics(Params);
+	FFlightPhysicsState State;
+	State.Speed = 6000.f;
+
+	Physics.Update(State, /*Throttle*/ -1.f, 0.f, 0.f, 0.f, /*bBoostActive*/ true, 1.f);
+
+	assert(NearlyEqual(State.Speed, 9000.f));
+	printf("Test_BoostOverridesBrakeInput passed\n");
+}
+
 int main()
 {
 	Test_ThrottleAcceleratesSpeed();
@@ -120,6 +140,7 @@ int main()
 	Test_PitchInputRotatesNoseAndClamps();
 	Test_YawInputWrapsAround360();
 	Test_BoostAcceleratesPastNormalMaxSpeed();
+	Test_BoostOverridesBrakeInput();
 	printf("All tests passed\n");
 	return 0;
 }
