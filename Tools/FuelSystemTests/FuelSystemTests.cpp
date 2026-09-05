@@ -72,12 +72,30 @@ static void Test_FuelNeverExceedsTankCapacity()
 	printf("Test_FuelNeverExceedsTankCapacity passed\n");
 }
 
+static void Test_EmptyTankDestroysThePlane()
+{
+	FFuelParams Params;
+	Params.BoostDrainPerSec = 25.f;
+	Params.RespawnSeconds = 3.f;
+	FFuelSystem Fuel(Params);
+	FFuelState State;
+	State.Fuel = 10.f;
+
+	Fuel.Update(State, true, 1.f);   // pede 25 de dreno com so 10 no tanque
+
+	assert(NearlyEqual(State.Fuel, 0.f));
+	assert(State.bIsDestroyed);
+	assert(NearlyEqual(State.RespawnTimer, 3.f));
+	printf("Test_EmptyTankDestroysThePlane passed\n");
+}
+
 int main()
 {
 	Test_BoostDrainsFuel();
 	Test_NotBoostingRegeneratesFuel();
 	Test_RegenIsSuppressedRightAfterBoosting();
 	Test_FuelNeverExceedsTankCapacity();
+	Test_EmptyTankDestroysThePlane();
 	printf("All tests passed\n");
 	return 0;
 }
