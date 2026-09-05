@@ -5,6 +5,15 @@ void FFuelSystem::Update(FFuelState& State, bool bBoostInput, float DeltaSeconds
 	if (bBoostInput)
 	{
 		State.Fuel -= Params.BoostDrainPerSec * DeltaSeconds;
+		State.TimeSinceBoostSec = 0.f;
+	}
+	else
+	{
+		State.TimeSinceBoostSec += DeltaSeconds;
+		if (State.TimeSinceBoostSec >= Params.RegenDelayAfterBoostSec)
+		{
+			State.Fuel += Params.PassiveRegenPerSec * DeltaSeconds;
+		}
 	}
 }
 

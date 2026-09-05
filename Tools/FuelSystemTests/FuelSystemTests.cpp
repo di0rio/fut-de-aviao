@@ -23,9 +23,25 @@ static void Test_BoostDrainsFuel()
 	printf("Test_BoostDrainsFuel passed\n");
 }
 
+static void Test_NotBoostingRegeneratesFuel()
+{
+	FFuelParams Params;
+	Params.PassiveRegenPerSec = 8.f;
+	Params.RegenDelayAfterBoostSec = 1.5f;
+	FFuelSystem Fuel(Params);
+	FFuelState State;
+	State.Fuel = 50.f;
+
+	Fuel.Update(State, false, 1.f);
+
+	assert(NearlyEqual(State.Fuel, 58.f));
+	printf("Test_NotBoostingRegeneratesFuel passed\n");
+}
+
 int main()
 {
 	Test_BoostDrainsFuel();
+	Test_NotBoostingRegeneratesFuel();
 	printf("All tests passed\n");
 	return 0;
 }
