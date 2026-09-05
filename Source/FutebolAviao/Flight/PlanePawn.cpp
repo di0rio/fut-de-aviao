@@ -3,6 +3,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Engine/Engine.h"
 
 APlanePawn::APlanePawn()
 	: FlightPhysics(FFlightPhysicsParams())
@@ -36,19 +37,61 @@ APlanePawn::APlanePawn()
 void APlanePawn::BeginPlay()
 {
 	Super::BeginPlay();
+	SpawnTransform = GetActorTransform();
 }
 
 void APlanePawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	FlightPhysics.Update(FlightState, ThrottleInput, PitchInput, YawInput, RollInput, DeltaSeconds);
+	const bool bBoostActive = bBoostInput && FuelSystem.CanBoost(FuelState);
+	FuelSystem.Update(FuelState, bBoostActive, DeltaSeconds);
+
+	// Explodiu neste frame: some da arena e para de voar.
+	if (FuelState.bIsDestroyed && !bWasDestroyed)
+	{
+		bWasDestroyed = true;
+		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);
+	}
+
+	// Respawnou neste frame: volta ao ponto inicial, parado e visivel.
+	if (!FuelState.bIsDestroyed && bWasDestroyed)
+	{
+		bWasDestroyed = false;
+		SetActorTransform(SpawnTransform);
+		FlightState = FFlightPhysicsState();
+
+		// Zera os eixos: input segurado durante a explosao/respawn nao pode
+		// produzir um solavanco no primeiro frame de volta ao jogo.
+		ThrottleInput = 0.f;
+		PitchInput = 0.f;
+		YawInput = 0.f;
+		RollInput = 0.f;
+
+		SetActorHiddenInGame(false);
+		SetActorEnableCollision(true);
+	}
+
+	if (FuelState.bIsDestroyed)
+	{
+		return; // fora da jogada: sem fisica de voo enquanto o timer roda
+	}
+
+	FlightPhysics.Update(FlightState, ThrottleInput, PitchInput, YawInput, RollInput, bBoostActive, DeltaSeconds);
 
 	const FRotator NewRotation(FlightState.PitchDeg, FlightState.YawDeg, FlightState.RollDeg);
 	SetActorRotation(NewRotation);
 
 	const FVector Forward = NewRotation.Vector();
 	AddActorWorldOffset(Forward * FlightState.Speed * DeltaSeconds, true);
+
+	// Sem HUD ainda: o combustivel aparece como texto de debug pra dar pra jogar a Task 4.
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::Yellow,
+			FString::Printf(TEXT("Fuel %.0f  Speed %.0f%s"), FuelState.Fuel, FlightState.Speed, bBoostActive ? TEXT("  BOOST") : TEXT("")));
+	}
 }
 
 void APlanePawn::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -59,6 +102,9 @@ void APlanePawn::SetupPlayerInputComponent(class UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAxis("Pitch", this, &APlanePawn::HandlePitchInput);
 	PlayerInputComponent->BindAxis("Yaw", this, &APlanePawn::HandleYawInput);
 	PlayerInputComponent->BindAxis("Roll", this, &APlanePawn::HandleRollInput);
+
+	PlayerInputComponent->BindAction("Boost", IE_Pressed, this, &APlanePawn::HandleBoostPressed);
+	PlayerInputComponent->BindAction("Boost", IE_Released, this, &APlanePawn::HandleBoostReleased);
 }
 
 void APlanePawn::HandleThrottleInput(float Value)
@@ -79,4 +125,14 @@ void APlanePawn::HandleYawInput(float Value)
 void APlanePawn::HandleRollInput(float Value)
 {
 	RollInput = Value;
+}
+
+void APlanePawn::HandleBoostPressed()
+{
+	bBoostInput = true;
+}
+
+void APlanePawn::HandleBoostReleased()
+{
+	bBoostInput = false;
 }
