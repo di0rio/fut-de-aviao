@@ -1,1 +1,16 @@
 .worktrees/
+
+# Unreal Engine generated/build folders
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+*.sln
+*.VC.db
+*.vcxproj*
+
+# Standalone test build output (Tools/*Tests)
+Tools/**/*.obj
+Tools/**/*.exe
+Tools/**/*.pdb
+Tools/**/*.ilk
