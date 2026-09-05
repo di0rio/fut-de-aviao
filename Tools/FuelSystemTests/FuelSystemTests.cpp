@@ -89,6 +89,51 @@ static void Test_EmptyTankDestroysThePlane()
 	printf("Test_EmptyTankDestroysThePlane passed\n");
 }
 
+static void Test_PlaneRespawnsWithHalfTankAfterTimer()
+{
+	FFuelParams Params;
+	Params.TankCapacity = 100.f;
+	Params.RespawnSeconds = 3.f;
+	Params.RespawnFuelFraction = 0.5f;
+	FFuelSystem Fuel(Params);
+	FFuelState State;
+	State.Fuel = 0.f;
+	State.bIsDestroyed = true;
+	State.RespawnTimer = 3.f;
+
+	Fuel.Update(State, false, 1.f);
+	assert(State.bIsDestroyed);              // 2s restantes: ainda fora da jogada
+
+	Fuel.Update(State, false, 1.f);
+	Fuel.Update(State, false, 1.f);
+
+	assert(!State.bIsDestroyed);
+	assert(NearlyEqual(State.Fuel, 50.f));
+	printf("Test_PlaneRespawnsWithHalfTankAfterTimer passed\n");
+}
+
+static void Test_CanBoostIsFalseWhileDestroyedOrEmpty()
+{
+	FFuelSystem Fuel((FFuelParams()));
+
+	FFuelState Alive;
+	Alive.Fuel = 10.f;
+	Alive.bIsDestroyed = false;
+	assert(Fuel.CanBoost(Alive));
+
+	FFuelState Empty;
+	Empty.Fuel = 0.f;
+	Empty.bIsDestroyed = false;
+	assert(!Fuel.CanBoost(Empty));
+
+	FFuelState Destroyed;
+	Destroyed.Fuel = 50.f;
+	Destroyed.bIsDestroyed = true;
+	assert(!Fuel.CanBoost(Destroyed));
+
+	printf("Test_CanBoostIsFalseWhileDestroyedOrEmpty passed\n");
+}
+
 int main()
 {
 	Test_BoostDrainsFuel();
@@ -96,6 +141,8 @@ int main()
 	Test_RegenIsSuppressedRightAfterBoosting();
 	Test_FuelNeverExceedsTankCapacity();
 	Test_EmptyTankDestroysThePlane();
+	Test_PlaneRespawnsWithHalfTankAfterTimer();
+	Test_CanBoostIsFalseWhileDestroyedOrEmpty();
 	printf("All tests passed\n");
 	return 0;
 }

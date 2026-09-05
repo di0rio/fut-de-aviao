@@ -12,6 +12,20 @@ namespace
 
 void FFuelSystem::Update(FFuelState& State, bool bBoostInput, float DeltaSeconds) const
 {
+	// Destruido: nao consome, nao regenera, so espera o respawn.
+	if (State.bIsDestroyed)
+	{
+		State.RespawnTimer -= DeltaSeconds;
+		if (State.RespawnTimer <= 0.f)
+		{
+			State.bIsDestroyed = false;
+			State.RespawnTimer = 0.f;
+			State.Fuel = Params.TankCapacity * Params.RespawnFuelFraction;
+			State.TimeSinceBoostSec = 0.f;
+		}
+		return;
+	}
+
 	if (bBoostInput)
 	{
 		State.Fuel -= Params.BoostDrainPerSec * DeltaSeconds;
