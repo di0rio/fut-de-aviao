@@ -68,9 +68,11 @@ void APlanePawn::Tick(float DeltaSeconds)
 		// guardam o valor atual do frame - zerar aqui e inocuo hoje, mas fica
 		// certo se o input for desabilitado enquanto o ator esta destruido.
 		// bBoostInput ja e outra historia: e orientado a evento (IE_Pressed/
-		// IE_Released) e nenhum Released dispara com o ator escondido, entao
-		// segurar o boost atravessa a morte inteira. Sem isto o aviao renasce
-		// ainda "boostando", reesvazia o tanque e reexplode em loop.
+		// IE_Released). Esconder o ator NAO suprime input - a causa real e que
+		// um jogador que segura a tecla de boost durante toda a morte nunca
+		// gera um IE_Released, entao a flag continua true atravessando o
+		// respawn inteiro. Sem isto o aviao renasce ainda "boostando",
+		// reesvazia o tanque e reexplode em loop.
 		ThrottleInput = 0.f;
 		PitchInput = 0.f;
 		YawInput = 0.f;

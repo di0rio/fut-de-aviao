@@ -17,7 +17,7 @@ static void Test_BoostDrainsFuel()
 	FFuelState State;
 	State.Fuel = 100.f;
 
-	Fuel.Update(State, /*bBoostInput*/ true, /*DeltaSeconds*/ 1.f);
+	Fuel.Update(State, /*bBoostActive*/ true, /*DeltaSeconds*/ 1.f);
 
 	assert(NearlyEqual(State.Fuel, 75.f));
 	printf("Test_BoostDrainsFuel passed\n");
@@ -162,17 +162,22 @@ static void Test_RespawnResetsPostBoostRegenDelay()
 {
 	// TimeSinceBoostSec precisa voltar a 0 no respawn: sem isso o regen nao
 	// respeitaria o RegenDelayAfterBoostSec logo apos o aviao voltar a jogada.
+	//
+	// A fixture entra no estado destruido DIRETAMENTE, sem boostar antes: se
+	// chegasse la boostando, o proprio branch de boost ja teria zerado
+	// TimeSinceBoostSec, e a asserção final passaria mesmo que a linha que
+	// zera o relogio no respawn fosse apagada. Comecando com o default de
+	// 1000.f (definido em FFuelState) e nunca tocando em TimeSinceBoostSec
+	// fora do respawn, so o codigo do respawn pode zera-lo.
 	FFuelParams Params;
 	Params.TankCapacity = 100.f;
-	Params.BoostDrainPerSec = 25.f;
 	Params.RespawnSeconds = 3.f;
 	Params.RespawnFuelFraction = 0.5f;
 	FFuelSystem Fuel(Params);
 	FFuelState State;
-	State.Fuel = 10.f;
-
-	Fuel.Update(State, true, 1.f);   // esvazia o tanque, destroi, zera o relogio de boost
-	assert(State.bIsDestroyed);
+	State.Fuel = 0.f;
+	State.bIsDestroyed = true;
+	State.RespawnTimer = 3.f;
 
 	Fuel.Update(State, false, 3.f);  // deixa o timer de respawn zerar
 
@@ -181,9 +186,26 @@ static void Test_RespawnResetsPostBoostRegenDelay()
 	printf("Test_RespawnResetsPostBoostRegenDelay passed\n");
 }
 
-static void Test_BoostHeldThroughRespawnDoesNotLoop()
+static void Test_ResolveBoostDoesNotReengageAfterRespawnWhenInputCleared()
 {
-	// Teste de regressao do Fix 1, na camada pura via ResolveBoost.
+	// ATENCAO: isto NAO e um teste de regressao do death loop (Fix 1). O fix de
+	// verdade e "bBoostInput = false;" no bloco de respawn de APlanePawn::Tick,
+	// em PlanePawn.cpp - e essa linha vive na camada de Unreal. As suites
+	// standalone deste repositorio (Tools/*) so linkam FlightPhysics.cpp e
+	// FuelSystem.cpp, ambos sem headers da engine; elas nao conseguem
+	// instanciar AActor/APawn, entao nao ha como este arquivo tocar
+	// APlanePawn::Tick nem provar que aquela linha existe ou continua existindo.
+	// Apagar "bBoostInput = false;" de PlanePawn.cpp deixa esta suite inteira
+	// verde.
+	//
+	// O que este teste de fato verifica: que FFuelSystem::ResolveBoost, dado um
+	// pedido de boost que já foi "limpo" (bBoostRequested == false) apos um
+	// ciclo destruir/respawnar, nao reengata o boost sozinho - e que, se o
+	// pedido NAO fosse limpo, ResolveBoost reengataria (mostrando por que o
+	// pawn precisa limpar). Isto cobre a aritmetica pura de ResolveBoost/
+	// CanBoost; a responsabilidade do pawn de realmente zerar bBoostInput
+	// continua sem cobertura automatizada e so pode ser verificada manualmente
+	// ou por um teste de Automation da Unreal (fora do escopo aqui).
 	FFuelParams Params;
 	Params.TankCapacity = 50.f;
 	Params.BoostDrainPerSec = 25.f;
@@ -226,7 +248,7 @@ static void Test_BoostHeldThroughRespawnDoesNotLoop()
 
 	assert(!State.bIsDestroyed);
 	assert(NearlyEqual(State.Fuel, 50.f));
-	printf("Test_BoostHeldThroughRespawnDoesNotLoop passed\n");
+	printf("Test_ResolveBoostDoesNotReengageAfterRespawnWhenInputCleared passed\n");
 }
 
 int main()
@@ -240,7 +262,7 @@ int main()
 	Test_CanBoostIsFalseWhileDestroyedOrEmpty();
 	Test_FuelDoesNotRegenerateWhileDestroyed();
 	Test_RespawnResetsPostBoostRegenDelay();
-	Test_BoostHeldThroughRespawnDoesNotLoop();
+	Test_ResolveBoostDoesNotReengageAfterRespawnWhenInputCleared();
 	printf("All tests passed\n");
 	return 0;
 }
