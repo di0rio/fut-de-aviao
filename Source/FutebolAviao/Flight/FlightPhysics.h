@@ -24,6 +24,8 @@ struct FFlightPhysicsState
 class FFlightPhysics
 {
 public:
+	// UHT's generated vtable-helper constructor for APlanePawn needs this member default-constructible.
+	FFlightPhysics() : Params() {}
 	explicit FFlightPhysics(const FFlightPhysicsParams& InParams) : Params(InParams) {}
 
 	// ThrottleInput, PitchInput, YawInput, RollInput sao esperados no intervalo [-1, 1].
