@@ -6,7 +6,7 @@ struct FFlightPhysicsParams
 {
 	float Acceleration = 1950.f;  // 0 -> maxima em ~2.3s, mesmo tempo de antes
 	float Deceleration = 1650.f;  // S freia de verdade: maxima -> parado em ~2.7s
-	float Drag = 525.f;           // soltar o acelerador desacelera em ~6.5s
+	float Drag = 525.f;           // soltar o acelerador desacelera em ~8.6s
 	float MaxSpeed = 4500.f;      // 45 m/s: atravessar o campo novo leva ~8.9s
 	float BoostMaxSpeed = 6500.f; // 65 m/s: acima do teto da bola, pra poder alcanca-la
 	float BoostAcceleration = 3750.f;
@@ -45,6 +45,11 @@ public:
 
 	// Velocidade escalar. O estado guarda vetor; isto e so a magnitude.
 	static float GetSpeed(const FFlightPhysicsState& State);
+
+	// Permite tuning ao vivo: o adapter sobrescreve os params por console
+	// variable sem reconstruir o objeto. Continua C++ puro.
+	void SetParams(const FFlightPhysicsParams& InParams) { Params = InParams; }
+	const FFlightPhysicsParams& GetParams() const { return Params; }
 
 private:
 	FFlightPhysicsParams Params;

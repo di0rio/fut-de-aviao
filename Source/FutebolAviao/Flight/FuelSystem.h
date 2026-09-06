@@ -34,6 +34,9 @@ public:
 	// porque a predicao de cliente da Fase 5 precisa rederivar isso sem a engine.
 	bool ResolveBoost(const FFuelState& State, bool bBoostRequested) const;
 
+	void SetParams(const FFuelParams& InParams) { Params = InParams; }
+	const FFuelParams& GetParams() const { return Params; }
+
 private:
 	FFuelParams Params;
 };

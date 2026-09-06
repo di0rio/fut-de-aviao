@@ -54,6 +54,7 @@ public:
 	void PushOutOf(FBallState& State, const PureMath::FPureVector& PlanePosition, const PureMath::FPureVector& PlaneVelocity, float PlaneRadius) const;
 
 	const FBallPhysicsParams& GetParams() const { return Params; }
+	void SetParams(const FBallPhysicsParams& InParams) { Params = InParams; }
 
 private:
 	FBallPhysicsParams Params;
