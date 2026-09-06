@@ -40,7 +40,7 @@ public:
 	// impacto. Raio esferico aproximado do aviao, generoso de proposito: acertar
 	// a bola tem que ser divertido, nao preciso.
 	UFUNCTION(BlueprintCallable, Category = "Plane")
-	float GetCollisionRadius() const { return 300.f; }
+	float GetCollisionRadius() const { return 600.f; }
 
 	PureMath::FPureVector GetPureVelocity() const { return FlightState.Velocity; }
 

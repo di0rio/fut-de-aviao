@@ -23,23 +23,24 @@ CUBE_MESH = "/Engine/BasicShapes/Cube.Cube"
 # eliminada. Se voce mudar um, mude o outro TAMBEM e rode este script de novo
 # pra regenerar Content/Maps/TestFlightMap.umap, ou as paredes da arena e a
 # boca do gol no nivel salvo ficam fora de sincronia com a fisica pura.
-ARENA_HALF_X = 10000.0
-ARENA_HALF_Y = 6000.0
-ARENA_CEILING_Z = 5000.0
-GOAL_HALF_WIDTH_Y = 1500.0
-GOAL_HEIGHT_Z = 2000.0
+ARENA_HALF_X = 20000.0
+ARENA_HALF_Y = 12000.0
+ARENA_CEILING_Z = 12000.0
+GOAL_HALF_WIDTH_Y = 3000.0
+GOAL_HEIGHT_Z = 4000.0
 
 # Altura dos PlayerStarts: o aviao nasce ja no ar, sem gravidade (ver FFlightPhysics).
-PLAYER_START_Z = 500.0
+PLAYER_START_Z = 1500.0
 
 # Dois spawns fixos, um de cada lado, virados um pro outro -- e assim que o 2v2
 # da Fase 4 vai funcionar. Com um jogador so, o segundo fica sobrando de
 # proposito: e o que prova que o respawn respeita o heading em que foi colocado
 # (APlanePawn semeia o FlightState a partir do transform do spawn).
-PLAYER_START_X = 9000.0
+PLAYER_START_X = 16000.0
 
-# Chao gigante so pra dar referencia visual de velocidade durante o playtest.
-FLOOR_SCALE = unreal.Vector(400.0, 400.0, 1.0)
+# Chao gigante so pra dar referencia visual de velocidade durante o playtest --
+# precisa cobrir os 400m x 240m da arena nova (o cubo da engine tem 100 de lado).
+FLOOR_SCALE = unreal.Vector(ARENA_HALF_X * 2 / 100.0, ARENA_HALF_Y * 2 / 100.0, 1.0)
 
 
 def spawn_box(actors, label, location, scale):

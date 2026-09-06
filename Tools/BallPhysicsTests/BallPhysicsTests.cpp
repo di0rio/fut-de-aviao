@@ -111,7 +111,14 @@ static void Test_BallFlyingIntoTheGoalMouthPassesThrough()
 	// A bola precisa saber onde fica a boca do gol (FArenaGeometry, embutida em
 	// Params.Arena) pra nao quicar bem onde deveria ser a entrada. Este teste
 	// mira bem no meio da boca (Y perto de zero, Z bem abaixo do travessao)
-	// pra provar isso.
+	// pra provar isso. Arena fixada explicitamente (nao usa o default de
+	// ArenaGeometry.h): este teste depende dos numeros abaixo pra decidir
+	// "perto da parede" e "dentro da boca", entao precisa fixar sua propria
+	// geometria em vez de herdar o default de producao, que muda por conta
+	// alheia a este teste.
+	Params.Arena.ArenaHalfX = 10000.f;
+	Params.Arena.GoalHalfWidthY = 1500.f;
+	Params.Arena.GoalHeightZ = 2000.f;
 	FBallPhysics Ball(Params);
 	FBallState State;
 	State.Position.X = 9900.f;   // perto da parede de fundo (ArenaHalfX = 10000)
@@ -134,7 +141,13 @@ static void Test_BallAboveTheCrossbarBouncesInsteadOfEscaping()
 	// Mesma aproximacao dos testes de boca do gol, mas em Y=0 (dentro da
 	// largura da boca) e Z acima do travessao (GoalHeightZ = 2000): so a
 	// clausula de altura barra esta bola de "entrar pela boca do gol" onde na
-	// verdade ha parede de fundo solida (o travessao fecha por cima).
+	// verdade ha parede de fundo solida (o travessao fecha por cima). Arena
+	// fixada explicitamente pelo mesmo motivo do teste anterior: os numeros
+	// do teste (Y=0, Z=2500) so fazem sentido contra esta geometria, nao
+	// contra o default de producao.
+	Params.Arena.ArenaHalfX = 10000.f;
+	Params.Arena.GoalHalfWidthY = 1500.f;
+	Params.Arena.GoalHeightZ = 2000.f;
 	FBallPhysics Ball(Params);
 	FBallState State;
 	State.Position.X = 9900.f;
@@ -186,6 +199,12 @@ static void Test_BallHittingTheBackWallOutsideTheMouthStillBounces()
 	Params.Gravity = 0.f;
 	Params.Drag = 0.f;
 	Params.Radius = 150.f;
+	// Arena fixada explicitamente: a posicao X=9900 so fica "perto da parede
+	// de fundo" contra ArenaHalfX=10000. Sem isto o teste herda o default de
+	// producao (que muda com o rescale) e para de testar o que o comentario
+	// abaixo diz que testa.
+	Params.Arena.ArenaHalfX = 10000.f;
+	Params.Arena.GoalHalfWidthY = 1500.f;
 	FBallPhysics Ball(Params);
 	FBallState State;
 	State.Position.X = 9900.f;   // mesma aproximacao do teste anterior

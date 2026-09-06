@@ -6,12 +6,12 @@
 struct FBallPhysicsParams
 {
 	float Gravity = 980.f;          // cm/s^2, puxando pra baixo
-	float Drag = 0.35f;             // fracao da velocidade perdida por segundo
+	float Drag = 0.20f;             // fracao da velocidade perdida por segundo
 	float Restitution = 0.75f;      // quanto da velocidade sobra depois de quicar
-	float Radius = 150.f;
-	float MaxSpeed = 12000.f;
-	float HitTransfer = 1.6f;   // quanto da velocidade de aproximacao do aviao vira impulso
-	float MinKick = 500.f;      // toque de raspao ainda mexe com a bola
+	float Radius = 400.f;           // 8m de diametro: visivel a 400m de distancia
+	float MaxSpeed = 6000.f;        // 60 m/s: abaixo do boost (65), acima do cruzeiro (45)
+	float HitTransfer = 1.1f;       // acerto em cruzeiro produz 5250, abaixo do teto
+	float MinKick = 300.f;          // raspao ainda mexe na bola, sem catapultar
 
 	// Fonte unica da geometria da arena, compartilhada com FMatchParams -- ver
 	// ArenaGeometry.h.

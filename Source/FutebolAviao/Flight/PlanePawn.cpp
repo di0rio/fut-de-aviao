@@ -17,13 +17,13 @@ APlanePawn::APlanePawn()
 	if (ConeMeshAsset.Succeeded())
 	{
 		MeshComponent->SetStaticMesh(ConeMeshAsset.Object);
-		MeshComponent->SetRelativeScale3D(FVector(2.f, 1.f, 1.f));
+		MeshComponent->SetRelativeScale3D(FVector(12.f, 6.f, 6.f));
 		MeshComponent->SetRelativeRotation(FRotator(90.f, 0.f, 0.f));
 	}
 
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComponent"));
 	SpringArmComponent->SetupAttachment(RootComponent);
-	SpringArmComponent->TargetArmLength = 800.f;
+	SpringArmComponent->TargetArmLength = 2500.f;
 	SpringArmComponent->SetRelativeRotation(FRotator(-15.f, 0.f, 0.f));
 	SpringArmComponent->bDoCollisionTest = false;
 	SpringArmComponent->bInheritPitch = false;
