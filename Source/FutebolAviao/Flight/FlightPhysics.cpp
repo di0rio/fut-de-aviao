@@ -28,6 +28,27 @@ namespace
 	{
 		return std::sqrt(V.X * V.X + V.Y * V.Y + V.Z * V.Z);
 	}
+
+	// Abaixo disso o vetor nao carrega direcao confiavel (velocidade em
+	// repouso, ou um blend que quase cancelou por CurrentDir e NoseDir serem
+	// quase opostos) - normalizar dividiria por quase-zero. Fallback e sempre
+	// o nariz.
+	constexpr float DirectionEpsilon = 1e-4f;
+
+	FFlightVector Normalize(const FFlightVector& V, const FFlightVector& Fallback)
+	{
+		const float Len = Length(V);
+		if (Len < DirectionEpsilon)
+		{
+			return Fallback;
+		}
+
+		FFlightVector Result;
+		Result.X = V.X / Len;
+		Result.Y = V.Y / Len;
+		Result.Z = V.Z / Len;
+		return Result;
+	}
 }
 
 void FFlightPhysics::Update(FFlightPhysicsState& State, float ThrottleInput, float PitchInput, float YawInput, float RollInput, bool bBoostActive, float DeltaSeconds) const
@@ -66,13 +87,38 @@ void FFlightPhysics::Update(FFlightPhysicsState& State, float ThrottleInput, flo
 	State.YawDeg = WrapDegrees(State.YawDeg + YawInput * Params.YawRateDegPerSec * DeltaSeconds);
 	State.RollDeg = WrapDegrees(State.RollDeg + RollInput * Params.RollRateDegPerSec * DeltaSeconds);
 
-	// Reaponta o vetor pelos angulos recem-atualizados - o pawn hoje faz esse
-	// mesmo calculo logo depois do Update retornar, entao fazer aqui preserva
-	// a ordem exata do modelo atual.
-	const FFlightVector Forward = ForwardFromAngles(State.PitchDeg, State.YawDeg);
-	State.Velocity.X = Forward.X * Speed;
-	State.Velocity.Y = Forward.Y * Speed;
-	State.Velocity.Z = Forward.Z * Speed;
+	// Passo 2 (inercia): a velocidade nao reaponta pro nariz instantaneamente
+	// mais - ela persegue por alinhamento exponencial, o que da peso ao aviao
+	// e cria deriva na curva. So a DIRECAO muda aqui; Speed acima e a mesma
+	// logica de sempre.
+	const FFlightVector NoseDir = ForwardFromAngles(State.PitchDeg, State.YawDeg);
+
+	// Direcao atual ANTES do blend, capturada da velocidade que ainda esta no
+	// estado (do frame anterior). MinSpeed=0 e normal (decidido em playtest),
+	// entao velocidade em repouso nao e bug - so nao tem direcao confiavel pra
+	// normalizar, e o nariz vira a direcao.
+	const float PreviousSpeed = Length(State.Velocity);
+	const FFlightVector CurrentDir = (PreviousSpeed > DirectionEpsilon) ? Normalize(State.Velocity, NoseDir) : NoseDir;
+
+	// Alinhamento exponencial: Alpha cresce com DeltaSeconds e satura em 1.0
+	// pra taxas de alinhamento altas (exp(-x) vira ~0 em float bem antes do
+	// limite de precisao), entao uma taxa bem alta reproduz o modelo antigo
+	// (velocidade solda no nariz todo frame) de novo.
+	const float Alpha = ClampValue(1.f - std::exp(-Params.VelocityAlignPerSec * DeltaSeconds), 0.f, 1.f);
+
+	FFlightVector Blended;
+	Blended.X = CurrentDir.X + (NoseDir.X - CurrentDir.X) * Alpha;
+	Blended.Y = CurrentDir.Y + (NoseDir.Y - CurrentDir.Y) * Alpha;
+	Blended.Z = CurrentDir.Z + (NoseDir.Z - CurrentDir.Z) * Alpha;
+
+	// Guarda: se CurrentDir e NoseDir forem quase opostos o blend pode
+	// cancelar quase tudo e sobrar um vetor curto demais pra normalizar com
+	// precisao - cai pro nariz nesse caso.
+	const FFlightVector BlendedDir = Normalize(Blended, NoseDir);
+
+	State.Velocity.X = BlendedDir.X * Speed;
+	State.Velocity.Y = BlendedDir.Y * Speed;
+	State.Velocity.Z = BlendedDir.Z * Speed;
 }
 
 float FFlightPhysics::GetSpeed(const FFlightPhysicsState& State)
