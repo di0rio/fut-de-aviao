@@ -25,6 +25,7 @@ CUBE_MESH = "/Engine/BasicShapes/Cube.Cube"
 # boca do gol no nivel salvo ficam fora de sincronia com a fisica pura.
 ARENA_HALF_X = 10000.0
 ARENA_HALF_Y = 6000.0
+ARENA_CEILING_Z = 5000.0
 GOAL_HALF_WIDTH_Y = 1500.0
 GOAL_HEIGHT_Z = 2000.0
 
@@ -115,6 +116,16 @@ def build():
         spawn_box(actors, "Travessao_" + side,
                   unreal.Vector(sign * ARENA_HALF_X, 0.0, GOAL_HEIGHT_Z + 1500.0),
                   unreal.Vector(1.0, GOAL_HALF_WIDTH_Y * 2 / 100.0, 30.0))
+
+    # Teto: fecha a arena por cima em Z = ArenaCeilingZ, cobrindo toda a
+    # planta da arena (mesmo padrao das paredes: cubo de 100 escalado pra
+    # cobrir o vao inteiro). Sem isto FBallPhysics::Update ainda quicava a
+    # bola em ArenaCeilingZ e o aviao voava reto pra fora dali, porque nao
+    # havia nenhuma geometria no nivel bloqueando aquela altura -- so o
+    # numero existia, na fisica pura.
+    spawn_box(actors, "Teto",
+              unreal.Vector(0.0, 0.0, ARENA_CEILING_Z),
+              unreal.Vector(ARENA_HALF_X * 2 / 100.0, ARENA_HALF_Y * 2 / 100.0, 1.0))
 
     if not unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL_PATH):
         raise RuntimeError("save_map falhou para {}".format(LEVEL_PATH))
