@@ -205,6 +205,7 @@ static void Test_BallHittingTheBackWallOutsideTheMouthStillBounces()
 	// abaixo diz que testa.
 	Params.Arena.ArenaHalfX = 10000.f;
 	Params.Arena.GoalHalfWidthY = 1500.f;
+	Params.Arena.GoalHeightZ = 2000.f;
 	FBallPhysics Ball(Params);
 	FBallState State;
 	State.Position.X = 9900.f;   // mesma aproximacao do teste anterior

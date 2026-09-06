@@ -370,6 +370,29 @@ static void Test_ZeroSpeedProducesNoNaNAndTakesNoseDirection()
 	printf("Test_ZeroSpeedProducesNoNaNAndTakesNoseDirection passed\n");
 }
 
+static void Test_SetParamsChangesBehaviourAtRuntime()
+{
+	// O tuning ao vivo depende disso: trocar os params de uma instancia ja
+	// construida tem que mudar o resultado do proximo Update.
+	FFlightPhysicsParams Slow;
+	Slow.MinSpeed = 0.f;
+	Slow.Acceleration = 1000.f;
+	Slow.MaxSpeed = 100000.f;
+	FFlightPhysics Physics(Slow);
+
+	FFlightPhysicsState State;
+	Physics.Update(State, 1.f, 0.f, 0.f, 0.f, false, 1.f);
+	assert(NearlyEqual(FFlightPhysics::GetSpeed(State), 1000.f));
+
+	FFlightPhysicsParams Fast = Slow;
+	Fast.Acceleration = 5000.f;
+	Physics.SetParams(Fast);
+
+	Physics.Update(State, 1.f, 0.f, 0.f, 0.f, false, 1.f);
+	assert(NearlyEqual(FFlightPhysics::GetSpeed(State), 6000.f));
+	printf("Test_SetParamsChangesBehaviourAtRuntime passed\n");
+}
+
 int main()
 {
 	Test_ThrottleAcceleratesSpeed();
@@ -384,6 +407,7 @@ int main()
 	Test_VelocityLagsBehindNoseWhenTurning();
 	Test_VelocityCatchesUpToNoseWhenFlyingStraight();
 	Test_ZeroSpeedProducesNoNaNAndTakesNoseDirection();
+	Test_SetParamsChangesBehaviourAtRuntime();
 	printf("All tests passed\n");
 	return 0;
 }
