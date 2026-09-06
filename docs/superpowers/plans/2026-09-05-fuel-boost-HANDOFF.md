@@ -37,9 +37,7 @@ Cobrir de verdade exige um Automation test da Unreal tickando um `APlanePawn` re
 
 ## Pendências registradas (nenhuma bloqueia a Fase 3)
 
-- `ClampValue` está duplicado entre `FuelSystem.cpp` e `FlightPhysics.cpp` — consequência da regra "sem dependência da engine". A Fase 3 traz um terceiro sistema puro (bola), que é o gatilho combinado para extrair um `PureMath.h` com `ClampValue` e `WrapDegrees`.
 - `FFlightPhysicsParams` e `FFuelParams` não são `UPROPERTY`, então cada iteração de tuning exige rebuild do editor. Expor como `EditDefaultsOnly` no pawn pagaria por si na próxima rodada de ajuste.
-- Não há harness commitado para rodar as suítes — cada execução é um `cl.exe` na mão, copiado de um doc de plano. Um `.bat` em `Tools/` resolveria antes que apareça uma terceira suíte.
 - O projeto declara Enhanced Input em `DefaultInput.ini` mas o código usa bindings legados via shim de compatibilidade. Funciona, mas a Fase 4 é split-screen local com quatro jogadores, que é exatamente onde mapeamento legado por jogador incomoda. Decidir antes da Fase 4, não durante.
 - `SetActorTransform` no respawn usa flags de sweep padrão. Inofensivo enquanto o movimento é `AddActorWorldOffset` manual; vira problema se o avião ganhar corpo físico.
 - Sem gravidade e sem colisão real com o chão além do sweep. O avião pode ficar preso no chão se você mergulhar — sair dá, puxando o nariz.
@@ -54,11 +52,11 @@ O ponto que justifica encarar isso algum dia: hoje **o boost é estritamente dom
 
 ## Rodar os testes
 
-```bash
-cmd /c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && cd /d "C:\Users\cauad\Desktop\dev\jogao" && cl /nologo /EHsc /std:c++17 /Fe:Tools\FuelSystemTests\FuelSystemTests.exe Tools\FuelSystemTests\FuelSystemTests.cpp Source\FutebolAviao\Flight\FuelSystem.cpp && Tools\FuelSystemTests\FuelSystemTests.exe'
+```powershell
+powershell -ExecutionPolicy Bypass -File Tools\run-tests.ps1
 ```
 
-Trocar `FuelSystem` por `FlightPhysics` para a outra suíte. Esperado: 10 e 9 testes, `All tests passed` nas duas.
+Descobre e roda as duas suítes automaticamente. Esperado: 10 e 9 testes, `All tests passed` nas duas, resumo final com `PASSED` para ambas e exit code 0.
 
 ## Próximo passo
 
