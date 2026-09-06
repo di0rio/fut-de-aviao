@@ -8,10 +8,10 @@ static bool NearlyEqual(float A, float B, float Tolerance = 0.01f)
 	return std::fabs(A - B) <= Tolerance;
 }
 
-// Angulo em graus entre duas FFlightVector, via produto escalar. Usado pelos
+// Angulo em graus entre duas PureMath::FPureVector, via produto escalar. Usado pelos
 // testes de inercia (Passo 2) pra medir o atraso entre velocidade e nariz -
 // nao existe em FlightPhysics.cpp porque so os testes precisam disso.
-static float AngleBetweenDeg(const FFlightVector& A, const FFlightVector& B)
+static float AngleBetweenDeg(const PureMath::FPureVector& A, const PureMath::FPureVector& B)
 {
 	constexpr float LocalPi = 3.14159265358979323846f;
 	const float LenA = std::sqrt(A.X * A.X + A.Y * A.Y + A.Z * A.Z);
@@ -27,13 +27,13 @@ static float AngleBetweenDeg(const FFlightVector& A, const FFlightVector& B)
 
 // Nariz atual do estado, mesma formula de ForwardFromAngles em FlightPhysics.cpp
 // (reimplementada aqui pra nao depender de simbolo interno do .cpp).
-static FFlightVector NoseDirOf(const FFlightPhysicsState& State)
+static PureMath::FPureVector NoseDirOf(const FFlightPhysicsState& State)
 {
 	constexpr float LocalPi = 3.14159265358979323846f;
 	const float PitchRad = State.PitchDeg * LocalPi / 180.f;
 	const float YawRad = State.YawDeg * LocalPi / 180.f;
 	const float CosPitch = std::cos(PitchRad);
-	FFlightVector Forward;
+	PureMath::FPureVector Forward;
 	Forward.X = CosPitch * std::cos(YawRad);
 	Forward.Y = CosPitch * std::sin(YawRad);
 	Forward.Z = std::sin(PitchRad);

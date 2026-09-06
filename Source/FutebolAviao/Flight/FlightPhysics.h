@@ -1,5 +1,7 @@
 #pragma once
 
+#include "PureMath.h"
+
 struct FFlightPhysicsParams
 {
 	float Acceleration = 2600.f;  // 0 -> maxima em ~2.3s
@@ -21,18 +23,9 @@ struct FFlightPhysicsParams
 	float VelocityAlignPerSec = 6.f;
 };
 
-// Vetor proprio: esta classe nao pode incluir header da Unreal. O pawn converte
-// pra FVector na fronteira.
-struct FFlightVector
-{
-	float X = 0.f;
-	float Y = 0.f;
-	float Z = 0.f;
-};
-
 struct FFlightPhysicsState
 {
-	FFlightVector Velocity;
+	PureMath::FPureVector Velocity;
 	float PitchDeg = 0.f;
 	float YawDeg = 0.f;
 	float RollDeg = 0.f;
