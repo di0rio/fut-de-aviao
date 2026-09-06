@@ -43,3 +43,37 @@ void FBallPhysics::Update(FBallState& State, float DeltaSeconds) const
 	BounceAxis(State.Position.Y, State.Velocity.Y, -Params.ArenaHalfY + R, Params.ArenaHalfY - R, Params.Restitution);
 	BounceAxis(State.Position.Z, State.Velocity.Z, R, Params.ArenaCeilingZ - R, Params.Restitution);
 }
+
+bool FBallPhysics::IsOverlapping(const FBallState& State, const PureMath::FPureVector& PlanePosition, float PlaneRadius) const
+{
+	const float Distance = PureMath::Length(PureMath::Subtract(State.Position, PlanePosition));
+	return Distance < (Params.Radius + PlaneRadius);
+}
+
+void FBallPhysics::ApplyHit(FBallState& State, const PureMath::FPureVector& PlanePosition, const PureMath::FPureVector& PlaneVelocity, float PlaneRadius) const
+{
+	PureMath::FPureVector Normal = PureMath::Normalized(PureMath::Subtract(State.Position, PlanePosition));
+	if (PureMath::Length(Normal) < 0.5f)
+	{
+		// Aviao exatamente em cima da bola: nao ha direcao definida. Chuta pra
+		// frente do aviao, que e a unica direcao com significado aqui.
+		Normal = PureMath::Normalized(PlaneVelocity);
+		if (PureMath::Length(Normal) < 0.5f)
+		{
+			Normal.Z = 1.f;   // aviao parado tambem: joga pra cima
+		}
+	}
+
+	const float Approach = PureMath::Dot(PlaneVelocity, Normal);
+	const float Impulse = (Approach > 0.f ? Approach * Params.HitTransfer : 0.f) + Params.MinKick;
+
+	State.Velocity = PureMath::Add(State.Velocity, PureMath::Scale(Normal, Impulse));
+
+	const float Speed = PureMath::Length(State.Velocity);
+	if (Speed > Params.MaxSpeed)
+	{
+		State.Velocity = PureMath::Scale(PureMath::Normalized(State.Velocity), Params.MaxSpeed);
+	}
+
+	State.Position = PureMath::Add(PlanePosition, PureMath::Scale(Normal, Params.Radius + PlaneRadius));
+}

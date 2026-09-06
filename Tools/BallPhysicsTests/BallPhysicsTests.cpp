@@ -62,11 +62,53 @@ static void Test_DragSlowsTheBallDown()
 	printf("Test_DragSlowsTheBallDown passed\n");
 }
 
+static void Test_PlaneHitPushesTheBallAway()
+{
+	FBallPhysicsParams Params;
+	Params.Radius = 150.f;
+	Params.HitTransfer = 1.6f;
+	Params.MinKick = 500.f;
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.X = 400.f;   // bola a frente do aviao, no eixo X
+
+	PureMath::FPureVector PlanePosition;   // aviao na origem
+	PureMath::FPureVector PlaneVelocity;
+	PlaneVelocity.X = 3000.f;              // voando em cima dela
+
+	Ball.ApplyHit(State, PlanePosition, PlaneVelocity, /*PlaneRadius*/ 300.f);
+
+	assert(State.Velocity.X > 3000.f);                  // levou impulso pra frente
+	assert(NearlyEqual(State.Velocity.Y, 0.f));
+	assert(NearlyEqual(State.Position.X, 450.f));       // empurrada pra fora da sobreposicao
+	printf("Test_PlaneHitPushesTheBallAway passed\n");
+}
+
+static void Test_StationaryPlaneStillNudgesTheBall()
+{
+	FBallPhysicsParams Params;
+	Params.Radius = 150.f;
+	Params.MinKick = 500.f;
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.X = 400.f;
+
+	PureMath::FPureVector PlanePosition;
+	PureMath::FPureVector PlaneVelocity;   // aviao parado
+
+	Ball.ApplyHit(State, PlanePosition, PlaneVelocity, 300.f);
+
+	assert(NearlyEqual(State.Velocity.X, 500.f));   // so o MinKick
+	printf("Test_StationaryPlaneStillNudgesTheBall passed\n");
+}
+
 int main()
 {
 	Test_GravityPullsTheBallDown();
 	Test_BallBouncesOffTheFloorLosingEnergy();
 	Test_DragSlowsTheBallDown();
+	Test_PlaneHitPushesTheBallAway();
+	Test_StationaryPlaneStillNudgesTheBall();
 	printf("All tests passed\n");
 	return 0;
 }
