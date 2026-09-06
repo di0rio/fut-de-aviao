@@ -36,8 +36,22 @@ public:
 	bool IsOverlapping(const FBallState& State, const PureMath::FPureVector& PlanePosition, float PlaneRadius) const;
 
 	// Impulso do aviao na bola, mais o empurrao que desfaz a sobreposicao -- sem
-	// ele o aviao "carrega" a bola, reacertando todo frame.
+	// ele o aviao "carrega" a bola, reacertando todo frame. Implementado como
+	// ApplyImpulse seguido de PushOutOf (abaixo); mantido porque as suites de
+	// teste chamam esta funcao combinada diretamente.
 	void ApplyHit(FBallState& State, const PureMath::FPureVector& PlanePosition, const PureMath::FPureVector& PlaneVelocity, float PlaneRadius) const;
+
+	// So a metade do impulso de ApplyHit: muda a velocidade, nao a posicao.
+	// Existe separada para o caso de varios avioes sobrepondo a bola no mesmo
+	// frame -- cada um contribui seu impulso antes de qualquer reposicionamento,
+	// em vez de cada ApplyHit desfazer o empurrao do anterior.
+	void ApplyImpulse(FBallState& State, const PureMath::FPureVector& PlanePosition, const PureMath::FPureVector& PlaneVelocity) const;
+
+	// A outra metade de ApplyHit: so o empurrao que tira a bola de dentro da
+	// esfera do aviao, sem tocar na velocidade. Chamada uma unica vez, mesmo
+	// quando varios avioes se sobrepuseram e cada um ja recebeu seu
+	// ApplyImpulse.
+	void PushOutOf(FBallState& State, const PureMath::FPureVector& PlanePosition, const PureMath::FPureVector& PlaneVelocity, float PlaneRadius) const;
 
 	const FBallPhysicsParams& GetParams() const { return Params; }
 
