@@ -16,6 +16,18 @@ import unreal
 LEVEL_PATH = "/Game/Maps/TestFlightMap"
 CUBE_MESH = "/Engine/BasicShapes/Cube.Cube"
 
+# ATENCAO: estas constantes de arena/gol sao uma copia manual dos defaults de
+# FArenaGeometry (Source/FutebolAviao/Flight/ArenaGeometry.h). Esse arquivo e
+# a fonte de verdade -- este script Python e um programa separado que a
+# engine nao consegue incluir, entao a duplicacao aqui nao tem como ser
+# eliminada. Se voce mudar um, mude o outro TAMBEM e rode este script de novo
+# pra regenerar Content/Maps/TestFlightMap.umap, ou as paredes da arena e a
+# boca do gol no nivel salvo ficam fora de sincronia com a fisica pura.
+ARENA_HALF_X = 10000.0
+ARENA_HALF_Y = 6000.0
+GOAL_HALF_WIDTH_Y = 1500.0
+GOAL_HEIGHT_Z = 2000.0
+
 # Altura dos PlayerStarts: o aviao nasce ja no ar, sem gravidade (ver FFlightPhysics).
 PLAYER_START_Z = 500.0
 
@@ -29,6 +41,15 @@ PLAYER_START_X = 9000.0
 FLOOR_SCALE = unreal.Vector(400.0, 400.0, 1.0)
 
 
+def spawn_box(actors, label, location, scale):
+    """Cubo estatico usado como parede. O cubo do Engine tem 100 de lado."""
+    box = spawn(actors, unreal.StaticMeshActor, location)
+    box.set_actor_label(label)
+    box.set_actor_scale3d(scale)
+    box.static_mesh_component.set_static_mesh(unreal.EditorAssetLibrary.load_asset(CUBE_MESH))
+    return box
+
+
 def spawn(actor_subsystem, actor_class, location, rotation=None):
     return actor_subsystem.spawn_actor_from_class(
         actor_class,
@@ -38,16 +59,17 @@ def spawn(actor_subsystem, actor_class, location, rotation=None):
 
 
 def build():
-    level_editor = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
     actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 
-    # new_level recusa sobrescrever, entao apagar antes e o que torna o script
-    # realmente idempotente -- rodar de novo recria o nivel do zero.
-    if unreal.EditorAssetLibrary.does_asset_exist(LEVEL_PATH):
-        unreal.EditorAssetLibrary.delete_asset(LEVEL_PATH)
-
-    if not level_editor.new_level(LEVEL_PATH, False):
-        raise RuntimeError("new_level falhou para {}".format(LEVEL_PATH))
+    # LevelEditorSubsystem.new_level recusa escrever num path que ja tem asset
+    # -- e falha mesmo logo depois de EditorAssetLibrary.delete_asset, porque
+    # nesta chamada headless (-run=pythonscript) o delete_asset devolve True
+    # sem de fato remover o pacote/arquivo (confirmado apagando e conferindo o
+    # disco: o .umap continua la). EditorLoadingAndSavingUtils.new_blank_map
+    # cria o mundo novo em memoria sem tocar em nenhum asset existente, e
+    # save_map grava (sobrescrevendo) diretamente no path de destino -- isso
+    # sim funciona de forma idempotente aqui.
+    world = unreal.EditorLoadingAndSavingUtils.new_blank_map(False)
 
     floor = spawn(actors, unreal.StaticMeshActor, unreal.Vector(0.0, 0.0, 0.0))
     floor.set_actor_label("Floor")
@@ -74,8 +96,28 @@ def build():
                  unreal.Rotator(pitch=0.0, yaw=180.0, roll=0.0))
     east.set_actor_label("PlayerStart_Leste")
 
-    if not level_editor.save_current_level():
-        raise RuntimeError("save_current_level falhou")
+    # Paredes laterais (eixo Y): compridas em X, finas em Y.
+    for side, sign in (("Norte", 1.0), ("Sul", -1.0)):
+        spawn_box(actors, "Parede_" + side,
+                  unreal.Vector(0.0, sign * ARENA_HALF_Y, 2500.0),
+                  unreal.Vector(ARENA_HALF_X * 2 / 100.0, 1.0, 50.0))
+
+    # Fundos (eixo X), com a boca do gol aberta no meio: dois blocos por lado.
+    for side, sign in (("Oeste", -1.0), ("Leste", 1.0)):
+        # Blocos laterais, deixando GOAL_HALF_WIDTH_Y livre no centro.
+        side_width = (ARENA_HALF_Y - GOAL_HALF_WIDTH_Y)
+        for edge, edge_sign in (("A", 1.0), ("B", -1.0)):
+            center_y = edge_sign * (GOAL_HALF_WIDTH_Y + side_width / 2.0)
+            spawn_box(actors, "Fundo_%s_%s" % (side, edge),
+                      unreal.Vector(sign * ARENA_HALF_X, center_y, 2500.0),
+                      unreal.Vector(1.0, side_width / 100.0, 50.0))
+        # Travessao: fecha por cima da boca.
+        spawn_box(actors, "Travessao_" + side,
+                  unreal.Vector(sign * ARENA_HALF_X, 0.0, GOAL_HEIGHT_Z + 1500.0),
+                  unreal.Vector(1.0, GOAL_HALF_WIDTH_Y * 2 / 100.0, 30.0))
+
+    if not unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL_PATH):
+        raise RuntimeError("save_map falhou para {}".format(LEVEL_PATH))
 
     unreal.log("TestFlightMap criado com {} atores".format(len(actors.get_all_level_actors())))
 
