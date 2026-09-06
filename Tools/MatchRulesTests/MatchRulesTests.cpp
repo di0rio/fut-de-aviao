@@ -5,9 +5,9 @@
 static void Test_BallInsideWestGoalCountsForEast()
 {
 	FMatchParams Params;
-	Params.ArenaHalfX = 10000.f;
-	Params.GoalHalfWidthY = 1500.f;
-	Params.GoalHeightZ = 2000.f;
+	Params.Arena.ArenaHalfX = 10000.f;
+	Params.Arena.GoalHalfWidthY = 1500.f;
+	Params.Arena.GoalHeightZ = 2000.f;
 	FMatchRules Rules(Params);
 
 	PureMath::FPureVector Ball;
@@ -22,9 +22,9 @@ static void Test_BallInsideWestGoalCountsForEast()
 static void Test_BallPastTheLineButOutsideTheMouthIsNotAGoal()
 {
 	FMatchParams Params;
-	Params.ArenaHalfX = 10000.f;
-	Params.GoalHalfWidthY = 1500.f;
-	Params.GoalHeightZ = 2000.f;
+	Params.Arena.ArenaHalfX = 10000.f;
+	Params.Arena.GoalHalfWidthY = 1500.f;
+	Params.Arena.GoalHeightZ = 2000.f;
 	FMatchRules Rules(Params);
 
 	PureMath::FPureVector TooWide;

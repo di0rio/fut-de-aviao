@@ -3,21 +3,21 @@
 EGoalSide FMatchRules::CheckGoal(const PureMath::FPureVector& BallPosition) const
 {
 	const bool bInsideMouth =
-		BallPosition.Y > -Params.GoalHalfWidthY &&
-		BallPosition.Y < Params.GoalHalfWidthY &&
+		BallPosition.Y > -Params.Arena.GoalHalfWidthY &&
+		BallPosition.Y < Params.Arena.GoalHalfWidthY &&
 		BallPosition.Z > 0.f &&
-		BallPosition.Z < Params.GoalHeightZ;
+		BallPosition.Z < Params.Arena.GoalHeightZ;
 
 	if (!bInsideMouth)
 	{
 		return EGoalSide::None;
 	}
 
-	if (BallPosition.X < -Params.ArenaHalfX)
+	if (BallPosition.X < -Params.Arena.ArenaHalfX)
 	{
 		return EGoalSide::West;
 	}
-	if (BallPosition.X > Params.ArenaHalfX)
+	if (BallPosition.X > Params.Arena.ArenaHalfX)
 	{
 		return EGoalSide::East;
 	}

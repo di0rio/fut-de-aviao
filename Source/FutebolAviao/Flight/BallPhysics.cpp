@@ -39,9 +39,20 @@ void FBallPhysics::Update(FBallState& State, float DeltaSeconds) const
 	State.Position = PureMath::Add(State.Position, PureMath::Scale(State.Velocity, DeltaSeconds));
 
 	const float R = Params.Radius;
-	BounceAxis(State.Position.X, State.Velocity.X, -Params.ArenaHalfX + R, Params.ArenaHalfX - R, Params.Restitution);
-	BounceAxis(State.Position.Y, State.Velocity.Y, -Params.ArenaHalfY + R, Params.ArenaHalfY - R, Params.Restitution);
-	BounceAxis(State.Position.Z, State.Velocity.Z, R, Params.ArenaCeilingZ - R, Params.Restitution);
+
+	// A boca do gol e um buraco na parede de fundo: dentro dela, o eixo X nao
+	// quica -- a bola deve atravessar pra dentro do gol em vez de bater numa
+	// parede que ali nao existe.
+	const bool bInsideGoalMouth =
+		std::fabs(State.Position.Y) < Params.Arena.GoalHalfWidthY &&
+		State.Position.Z < Params.Arena.GoalHeightZ;
+
+	if (!bInsideGoalMouth)
+	{
+		BounceAxis(State.Position.X, State.Velocity.X, -Params.Arena.ArenaHalfX + R, Params.Arena.ArenaHalfX - R, Params.Restitution);
+	}
+	BounceAxis(State.Position.Y, State.Velocity.Y, -Params.Arena.ArenaHalfY + R, Params.Arena.ArenaHalfY - R, Params.Restitution);
+	BounceAxis(State.Position.Z, State.Velocity.Z, R, Params.Arena.ArenaCeilingZ - R, Params.Restitution);
 }
 
 bool FBallPhysics::IsOverlapping(const FBallState& State, const PureMath::FPureVector& PlanePosition, float PlaneRadius) const
