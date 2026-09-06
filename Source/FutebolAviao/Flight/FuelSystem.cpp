@@ -1,14 +1,7 @@
 #include "FuelSystem.h"
+#include "PureMath.h"
 
-namespace
-{
-	float ClampValue(float Value, float Min, float Max)
-	{
-		if (Value < Min) return Min;
-		if (Value > Max) return Max;
-		return Value;
-	}
-}
+using namespace PureMath;
 
 void FFuelSystem::Update(FFuelState& State, bool bBoostActive, float DeltaSeconds) const
 {
