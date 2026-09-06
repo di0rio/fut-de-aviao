@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PureMath.h"
+#include "ArenaGeometry.h"
 
 struct FBallPhysicsParams
 {
@@ -12,10 +13,9 @@ struct FBallPhysicsParams
 	float HitTransfer = 1.6f;   // quanto da velocidade de aproximacao do aviao vira impulso
 	float MinKick = 500.f;      // toque de raspao ainda mexe com a bola
 
-	// Arena: caixa fechada. X e Y sao metades; o chao e Z=0.
-	float ArenaHalfX = 10000.f;
-	float ArenaHalfY = 6000.f;
-	float ArenaCeilingZ = 5000.f;
+	// Fonte unica da geometria da arena, compartilhada com FMatchParams -- ver
+	// ArenaGeometry.h.
+	FArenaGeometry Arena;
 };
 
 struct FBallState

@@ -47,9 +47,9 @@ static void Test_DragSlowsTheBallDown()
 	FBallPhysicsParams Params;
 	Params.Gravity = 0.f;
 	Params.Drag = 0.5f;
-	Params.ArenaHalfX = 100000.f;
-	Params.ArenaHalfY = 100000.f;
-	Params.ArenaCeilingZ = 100000.f;
+	Params.Arena.ArenaHalfX = 100000.f;
+	Params.Arena.ArenaHalfY = 100000.f;
+	Params.Arena.ArenaCeilingZ = 100000.f;
 	FBallPhysics Ball(Params);
 	FBallState State;
 	State.Position.Z = 5000.f;
@@ -102,6 +102,48 @@ static void Test_StationaryPlaneStillNudgesTheBall()
 	printf("Test_StationaryPlaneStillNudgesTheBall passed\n");
 }
 
+static void Test_BallFlyingIntoTheGoalMouthPassesThrough()
+{
+	FBallPhysicsParams Params;
+	Params.Gravity = 0.f;
+	Params.Drag = 0.f;
+	Params.Radius = 150.f;
+	// A bola precisa saber onde fica a boca do gol (FArenaGeometry, embutida em
+	// Params.Arena) pra nao quicar bem onde deveria ser a entrada. Este teste
+	// mira bem no meio da boca (Y perto de zero, Z bem abaixo do travessao)
+	// pra provar isso.
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.X = 9900.f;   // perto da parede de fundo (ArenaHalfX = 10000)
+	State.Position.Y = 0.f;      // centro da boca do gol
+	State.Position.Z = 1000.f;   // bem abaixo do travessao
+	State.Velocity.X = 5000.f;   // rapido o bastante pra passar da linha em 1s
+
+	Ball.Update(State, 1.f);
+
+	assert(State.Position.X > Params.Arena.ArenaHalfX);   // atravessou, nao quicou de volta
+	printf("Test_BallFlyingIntoTheGoalMouthPassesThrough passed\n");
+}
+
+static void Test_BallHittingTheBackWallOutsideTheMouthStillBounces()
+{
+	FBallPhysicsParams Params;
+	Params.Gravity = 0.f;
+	Params.Drag = 0.f;
+	Params.Radius = 150.f;
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.X = 9900.f;   // mesma aproximacao do teste anterior
+	State.Position.Y = 4000.f;   // bem longe da boca do gol (GoalHalfWidthY = 1500)
+	State.Position.Z = 1000.f;
+	State.Velocity.X = 5000.f;
+
+	Ball.Update(State, 1.f);
+
+	assert(State.Velocity.X < 0.f);   // quicou: velocidade inverteu
+	printf("Test_BallHittingTheBackWallOutsideTheMouthStillBounces passed\n");
+}
+
 int main()
 {
 	Test_GravityPullsTheBallDown();
@@ -109,6 +151,8 @@ int main()
 	Test_DragSlowsTheBallDown();
 	Test_PlaneHitPushesTheBallAway();
 	Test_StationaryPlaneStillNudgesTheBall();
+	Test_BallFlyingIntoTheGoalMouthPassesThrough();
+	Test_BallHittingTheBackWallOutsideTheMouthStillBounces();
 	printf("All tests passed\n");
 	return 0;
 }

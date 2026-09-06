@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PureMath.h"
+#include "ArenaGeometry.h"
 
 enum class EGoalSide
 {
@@ -11,9 +12,9 @@ enum class EGoalSide
 
 struct FMatchParams
 {
-	float ArenaHalfX = 10000.f;
-	float GoalHalfWidthY = 1500.f;
-	float GoalHeightZ = 2000.f;
+	// Fonte unica da geometria da arena, compartilhada com FBallPhysicsParams --
+	// ver ArenaGeometry.h.
+	FArenaGeometry Arena;
 };
 
 struct FMatchState
