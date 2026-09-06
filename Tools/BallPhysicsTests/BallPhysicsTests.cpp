@@ -125,6 +125,30 @@ static void Test_BallFlyingIntoTheGoalMouthPassesThrough()
 	printf("Test_BallFlyingIntoTheGoalMouthPassesThrough passed\n");
 }
 
+static void Test_BallAboveTheCrossbarBouncesInsteadOfEscaping()
+{
+	FBallPhysicsParams Params;
+	Params.Gravity = 0.f;
+	Params.Drag = 0.f;
+	Params.Radius = 150.f;
+	// Mesma aproximacao dos testes de boca do gol, mas em Y=0 (dentro da
+	// largura da boca) e Z acima do travessao (GoalHeightZ = 2000): so a
+	// clausula de altura barra esta bola de "entrar pela boca do gol" onde na
+	// verdade ha parede de fundo solida (o travessao fecha por cima).
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.X = 9900.f;
+	State.Position.Y = 0.f;
+	State.Position.Z = 2500.f;
+	State.Velocity.X = 5000.f;
+
+	Ball.Update(State, 1.f);
+
+	assert(State.Velocity.X < 0.f);                       // quicou, velocidade inverteu
+	assert(State.Position.X <= Params.Arena.ArenaHalfX);   // continua dentro da arena
+	printf("Test_BallAboveTheCrossbarBouncesInsteadOfEscaping passed\n");
+}
+
 static void Test_IsOverlappingDetectsContactAndSeparation()
 {
 	FBallPhysicsParams Params;
@@ -183,6 +207,7 @@ int main()
 	Test_PlaneHitPushesTheBallAway();
 	Test_StationaryPlaneStillNudgesTheBall();
 	Test_BallFlyingIntoTheGoalMouthPassesThrough();
+	Test_BallAboveTheCrossbarBouncesInsteadOfEscaping();
 	Test_IsOverlappingDetectsContactAndSeparation();
 	Test_BallHittingTheBackWallOutsideTheMouthStillBounces();
 	printf("All tests passed\n");
