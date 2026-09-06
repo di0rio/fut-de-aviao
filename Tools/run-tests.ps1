@@ -33,6 +33,7 @@ if (-not (Test-Path $VcVars))
 # convencao de nomes, sem tocar neste script.
 $Suffix = "Tests"
 $Suites = @()
+$OrphanFound = $false
 
 Get-ChildItem -Path $ToolsDir -Directory | Where-Object { $_.Name.EndsWith($Suffix) } | ForEach-Object {
 	$Name = $_.Name.Substring(0, $_.Name.Length - $Suffix.Length)
@@ -48,13 +49,22 @@ Get-ChildItem -Path $ToolsDir -Directory | Where-Object { $_.Name.EndsWith($Suff
 			SourceCpp = $SourceCpp
 		}
 	}
+	elseif (Test-Path $TestCpp)
+	{
+		# Existe o teste mas nao o par em Source\Flight - suite orfa. Isso NAO
+		# pode ser um skip silencioso: uma suite parar de rodar (fonte
+		# renomeada/apagada) e pior do que nunca ter existido, porque da falsa
+		# confianca. Reporta por nome e derruba o exit code.
+		Write-Host "ORFAO: $TestCpp existe mas $SourceCpp nao foi encontrado - suite '$Name' NAO sera executada" -ForegroundColor Red
+		$OrphanFound = $true
+	}
 	else
 	{
 		Write-Host "Ignorando $($_.Name): nao achei o par $TestCpp / $SourceCpp" -ForegroundColor Yellow
 	}
 }
 
-if ($Suites.Count -eq 0)
+if ($Suites.Count -eq 0 -and -not $OrphanFound)
 {
 	Write-Host "Nenhuma suite encontrada em $ToolsDir" -ForegroundColor Red
 	exit 1
@@ -114,6 +124,13 @@ foreach ($Result in $Results)
 {
 	$Color = if ($Result.Status -eq "PASSED") { "Green" } else { "Red" }
 	Write-Host "$($Result.Name): $($Result.Status)" -ForegroundColor $Color
+}
+
+if ($OrphanFound)
+{
+	Write-Host ""
+	Write-Host "Encontrada suite orfa (teste sem fonte pareado) - ver mensagens ORFAO acima." -ForegroundColor Red
+	exit 1
 }
 
 if ($AnyFailed)
