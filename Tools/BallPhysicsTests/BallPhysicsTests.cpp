@@ -23,9 +23,50 @@ static void Test_GravityPullsTheBallDown()
 	printf("Test_GravityPullsTheBallDown passed\n");
 }
 
+static void Test_BallBouncesOffTheFloorLosingEnergy()
+{
+	FBallPhysicsParams Params;
+	Params.Gravity = 0.f;
+	Params.Drag = 0.f;
+	Params.Restitution = 0.75f;
+	Params.Radius = 150.f;
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.Z = 200.f;
+	State.Velocity.Z = -100.f;
+
+	Ball.Update(State, 1.f);   // desceria pra 100, abaixo do raio: quica
+
+	assert(NearlyEqual(State.Position.Z, 150.f));   // pousada em cima do chao
+	assert(NearlyEqual(State.Velocity.Z, 75.f));    // 100 * 0.75, agora subindo
+	printf("Test_BallBouncesOffTheFloorLosingEnergy passed\n");
+}
+
+static void Test_DragSlowsTheBallDown()
+{
+	FBallPhysicsParams Params;
+	Params.Gravity = 0.f;
+	Params.Drag = 0.5f;
+	Params.ArenaHalfX = 100000.f;
+	Params.ArenaHalfY = 100000.f;
+	Params.ArenaCeilingZ = 100000.f;
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.Z = 5000.f;
+	State.Velocity.X = 1000.f;
+
+	Ball.Update(State, 1.f);
+
+	assert(State.Velocity.X < 1000.f);
+	assert(State.Velocity.X > 0.f);   // desacelera, nao inverte nem zera
+	printf("Test_DragSlowsTheBallDown passed\n");
+}
+
 int main()
 {
 	Test_GravityPullsTheBallDown();
+	Test_BallBouncesOffTheFloorLosingEnergy();
+	Test_DragSlowsTheBallDown();
 	printf("All tests passed\n");
 	return 0;
 }
