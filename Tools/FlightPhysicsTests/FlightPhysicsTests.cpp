@@ -8,6 +8,38 @@ static bool NearlyEqual(float A, float B, float Tolerance = 0.01f)
 	return std::fabs(A - B) <= Tolerance;
 }
 
+// Angulo em graus entre duas FFlightVector, via produto escalar. Usado pelos
+// testes de inercia (Passo 2) pra medir o atraso entre velocidade e nariz -
+// nao existe em FlightPhysics.cpp porque so os testes precisam disso.
+static float AngleBetweenDeg(const FFlightVector& A, const FFlightVector& B)
+{
+	constexpr float LocalPi = 3.14159265358979323846f;
+	const float LenA = std::sqrt(A.X * A.X + A.Y * A.Y + A.Z * A.Z);
+	const float LenB = std::sqrt(B.X * B.X + B.Y * B.Y + B.Z * B.Z);
+	if (LenA < 1e-6f || LenB < 1e-6f)
+	{
+		return 0.f;
+	}
+	float CosAngle = (A.X * B.X + A.Y * B.Y + A.Z * B.Z) / (LenA * LenB);
+	CosAngle = CosAngle < -1.f ? -1.f : (CosAngle > 1.f ? 1.f : CosAngle);
+	return std::acos(CosAngle) * 180.f / LocalPi;
+}
+
+// Nariz atual do estado, mesma formula de ForwardFromAngles em FlightPhysics.cpp
+// (reimplementada aqui pra nao depender de simbolo interno do .cpp).
+static FFlightVector NoseDirOf(const FFlightPhysicsState& State)
+{
+	constexpr float LocalPi = 3.14159265358979323846f;
+	const float PitchRad = State.PitchDeg * LocalPi / 180.f;
+	const float YawRad = State.YawDeg * LocalPi / 180.f;
+	const float CosPitch = std::cos(PitchRad);
+	FFlightVector Forward;
+	Forward.X = CosPitch * std::cos(YawRad);
+	Forward.Y = CosPitch * std::sin(YawRad);
+	Forward.Z = std::sin(PitchRad);
+	return Forward;
+}
+
 static void Test_ThrottleAcceleratesSpeed()
 {
 	FFlightPhysicsParams Params;
@@ -176,6 +208,12 @@ static void Test_VelocityVectorMatchesLegacyNoseDirectionModel()
 	};
 
 	FFlightPhysicsParams Params; // parametros default, compartilhados pelos dois modelos
+	// Passo 2 (inercia) fez a velocidade perseguir o nariz por alinhamento
+	// exponencial em vez de reapontar instantaneamente. Com uma taxa de
+	// alinhamento bem alta, Alpha satura em 1.0f e o modelo degenera de volta
+	// no comportamento da Fase 2 (velocidade == nariz, sem atraso) - e isso
+	// que este teste de equivalencia precisa pra continuar valendo.
+	Params.VelocityAlignPerSec = 1000.f;
 	FFlightPhysics Physics(Params);
 	FFlightPhysicsState State; // modelo novo: FFlightPhysics::Update mexe nisto
 
@@ -250,6 +288,88 @@ static void Test_VelocityVectorMatchesLegacyNoseDirectionModel()
 	printf("Test_VelocityVectorMatchesLegacyNoseDirectionModel passed\n");
 }
 
+static void Test_VelocityLagsBehindNoseWhenTurning()
+{
+	// Passo 2 (inercia): a velocidade nao gira junto com o nariz, ela
+	// persegue por alinhamento exponencial. Contra o modelo de hoje (Velocity
+	// reapontada pro nariz todo frame) o angulo abaixo e sempre zero, entao
+	// este teste tem que falhar antes da implementacao.
+	FFlightPhysicsParams Params;
+	Params.VelocityAlignPerSec = 6.f;
+	FFlightPhysics Physics(Params);
+	FFlightPhysicsState State;
+
+	// Voa reto pra ganhar velocidade - sem yaw, entao velocidade e nariz
+	// continuam colados nesta fase.
+	for (int i = 0; i < 30; ++i)
+	{
+		Physics.Update(State, /*Throttle*/ 1.f, 0.f, 0.f, 0.f, false, 0.1f);
+	}
+	assert(AngleBetweenDeg(State.Velocity, NoseDirOf(State)) < 0.1f);
+
+	// Yaw forte por 1s (110 deg/s de taxa) - o nariz vira rapido, a
+	// velocidade fica pra tras.
+	for (int i = 0; i < 10; ++i)
+	{
+		Physics.Update(State, /*Throttle*/ 1.f, 0.f, /*Yaw*/ 1.f, 0.f, false, 0.1f);
+	}
+
+	const float Angle = AngleBetweenDeg(State.Velocity, NoseDirOf(State));
+	assert(Angle > 5.f); // FALHA no modelo atual: la o angulo e sempre 0
+	printf("Test_VelocityLagsBehindNoseWhenTurning passed (angle=%.2f deg)\n", Angle);
+}
+
+static void Test_VelocityCatchesUpToNoseWhenFlyingStraight()
+{
+	// Prova que o atraso da Fase 2 e transitorio: depois que o nariz para de
+	// virar, esperar o suficiente tem que trazer a velocidade de volta a
+	// quase-zero graus de diferenca.
+	FFlightPhysicsParams Params;
+	Params.VelocityAlignPerSec = 6.f;
+	FFlightPhysics Physics(Params);
+	FFlightPhysicsState State;
+
+	for (int i = 0; i < 30; ++i)
+	{
+		Physics.Update(State, 1.f, 0.f, 0.f, 0.f, false, 0.1f);
+	}
+	for (int i = 0; i < 10; ++i)
+	{
+		Physics.Update(State, 1.f, 0.f, 1.f, 0.f, false, 0.1f);
+	}
+	assert(AngleBetweenDeg(State.Velocity, NoseDirOf(State)) > 5.f); // ainda em atraso aqui
+
+	// Solta o yaw e voa reto por bastante tempo (varias constantes de tempo:
+	// tau = 1/VelocityAlignPerSec ~= 0.167s, entao 2s e ~12 tau).
+	for (int i = 0; i < 20; ++i)
+	{
+		Physics.Update(State, 1.f, 0.f, 0.f, 0.f, false, 0.1f);
+	}
+
+	const float Angle = AngleBetweenDeg(State.Velocity, NoseDirOf(State));
+	assert(Angle < 0.5f);
+	printf("Test_VelocityCatchesUpToNoseWhenFlyingStraight passed (angle=%.4f deg)\n", Angle);
+}
+
+static void Test_ZeroSpeedProducesNoNaNAndTakesNoseDirection()
+{
+	// Guarda a guarda: MinSpeed=0 e estado normal (decidido em playtest), nao
+	// pode gerar NaN nem divisao por zero, e em repouso a direcao e
+	// simplesmente o nariz.
+	FFlightPhysicsParams Params;
+	Params.VelocityAlignPerSec = 6.f;
+	FFlightPhysics Physics(Params);
+	FFlightPhysicsState State; // repouso: Velocity = {0,0,0}
+
+	Physics.Update(State, /*Throttle*/ 1.f, 0.f, 0.f, 0.f, false, 0.1f);
+
+	assert(std::isfinite(State.Velocity.X));
+	assert(std::isfinite(State.Velocity.Y));
+	assert(std::isfinite(State.Velocity.Z));
+	assert(AngleBetweenDeg(State.Velocity, NoseDirOf(State)) < 0.1f);
+	printf("Test_ZeroSpeedProducesNoNaNAndTakesNoseDirection passed\n");
+}
+
 int main()
 {
 	Test_ThrottleAcceleratesSpeed();
@@ -261,6 +381,9 @@ int main()
 	Test_BoostAcceleratesPastNormalMaxSpeed();
 	Test_BoostOverridesBrakeInput();
 	Test_VelocityVectorMatchesLegacyNoseDirectionModel();
+	Test_VelocityLagsBehindNoseWhenTurning();
+	Test_VelocityCatchesUpToNoseWhenFlyingStraight();
+	Test_ZeroSpeedProducesNoNaNAndTakesNoseDirection();
 	printf("All tests passed\n");
 	return 0;
 }

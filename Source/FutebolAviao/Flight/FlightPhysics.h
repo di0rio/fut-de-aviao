@@ -13,6 +13,12 @@ struct FFlightPhysicsParams
 	float YawRateDegPerSec = 110.f;  // igual ao pitch: mirar em 3D fica simetrico
 	float RollRateDegPerSec = 200.f;
 	float MaxPitchDeg = 85.f;
+
+	// Quao rapido o vetor velocidade persegue o nariz, por segundo. Valor alto =
+	// velocidade cola no nariz (comportamento da Fase 2). Valor baixo = aviao
+	// pesado, derrapa na curva. Em curva a taxa maxima (110 deg/s), o atraso de
+	// regime fica em torno de 110/AlinhamentoPorSegundo graus.
+	float VelocityAlignPerSec = 6.f;
 };
 
 // Vetor proprio: esta classe nao pode incluir header da Unreal. O pawn converte
