@@ -98,4 +98,4 @@ Mexer aqui é seguro — os testes em `Tools/FlightPhysicsTests/` setam os próp
 
 ## Próximo passo
 
-**Fase 2 — combustível + boost.** Ainda não tem plano escrito; a spec já cobre o design (seções "Mecânicas centrais" e "Fases de desenvolvimento" em `docs/superpowers/specs/2026-09-05-futebol-aviao-design.md`). Ao retomar, invocar a skill `writing-plans` pra gerar o plano da Fase 2 antes de codar.
+**Fase 2 — combustível + boost: FEITA.** Ver `2026-09-05-fuel-boost-HANDOFF.md`. O que segue era o texto de quando ela ainda não existia; a spec cobre o design (seções "Mecânicas centrais" e "Fases de desenvolvimento" em `docs/superpowers/specs/2026-09-05-futebol-aviao-design.md`). Ao retomar, invocar a skill `writing-plans` pra gerar o plano da Fase 2 antes de codar.
