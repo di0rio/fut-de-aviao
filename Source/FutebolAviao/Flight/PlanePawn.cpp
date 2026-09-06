@@ -4,6 +4,24 @@
 #include "Camera/CameraComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/Engine.h"
+#include "../Tuning/TuningCVars.h"
+
+namespace
+{
+	TAutoConsoleVariable<float> CVarPlaneMaxSpeed(TEXT("fa.Plane.MaxSpeed"), -1.f, TEXT("Velocidade maxima em cruzeiro, cm/s. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarPlaneBoostMaxSpeed(TEXT("fa.Plane.BoostMaxSpeed"), -1.f, TEXT("Teto de velocidade no boost, cm/s. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarPlaneAcceleration(TEXT("fa.Plane.Acceleration"), -1.f, TEXT("Aceleracao, cm/s2. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarPlaneBoostAcceleration(TEXT("fa.Plane.BoostAcceleration"), -1.f, TEXT("Aceleracao no boost, cm/s2. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarPlaneDrag(TEXT("fa.Plane.Drag"), -1.f, TEXT("Arrasto com acelerador solto, cm/s2. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarPlaneTurnRate(TEXT("fa.Plane.TurnRate"), -1.f, TEXT("Taxa de pitch E yaw juntos, graus/s. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarPlaneVelocityAlign(TEXT("fa.Plane.VelocityAlign"), -1.f, TEXT("Quao rapido a velocidade persegue o nariz. Valor alto (1000) desliga a inercia. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarPlaneCollisionRadius(TEXT("fa.Plane.CollisionRadius"), -1.f, TEXT("Raio esferico do aviao pra colisao com a bola. -1 usa o default."));
+
+	TAutoConsoleVariable<float> CVarFuelTankCapacity(TEXT("fa.Fuel.TankCapacity"), -1.f, TEXT("Tamanho do tanque. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarFuelBoostDrain(TEXT("fa.Fuel.BoostDrain"), -1.f, TEXT("Consumo do boost por segundo. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarFuelRegen(TEXT("fa.Fuel.Regen"), -1.f, TEXT("Regeneracao passiva por segundo. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarFuelRespawnSeconds(TEXT("fa.Fuel.RespawnSeconds"), -1.f, TEXT("Segundos fora da jogada depois de explodir. -1 usa o default."));
+}
 
 APlanePawn::APlanePawn()
 	: FlightPhysics(FFlightPhysicsParams())
@@ -44,6 +62,7 @@ void APlanePawn::BeginPlay()
 void APlanePawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	ApplyTuningCVars();
 
 	const bool bBoostActive = FuelSystem.ResolveBoost(FuelState, bBoostInput);
 	FuelSystem.Update(FuelState, bBoostActive, DeltaSeconds);
@@ -154,6 +173,36 @@ void APlanePawn::HandleBoostReleased()
 void APlanePawn::SetSpawnTransform(const FTransform& NewSpawnTransform)
 {
 	SpawnTransform = NewSpawnTransform;
+}
+
+void APlanePawn::ApplyTuningCVars()
+{
+	// Parte SEMPRE dos defaults puros, nunca dos params atuais. Se lesse os
+	// atuais, um valor setado por CVar ficaria grudado pra sempre: voltar a
+	// CVar pra -1 nao teria como restaurar o default.
+	FFlightPhysicsParams FlightParams;
+	Tuning::Apply(CVarPlaneMaxSpeed, FlightParams.MaxSpeed);
+	Tuning::Apply(CVarPlaneBoostMaxSpeed, FlightParams.BoostMaxSpeed);
+	Tuning::Apply(CVarPlaneAcceleration, FlightParams.Acceleration);
+	Tuning::Apply(CVarPlaneBoostAcceleration, FlightParams.BoostAcceleration);
+	Tuning::Apply(CVarPlaneDrag, FlightParams.Drag);
+	Tuning::Apply(CVarPlaneVelocityAlign, FlightParams.VelocityAlignPerSec);
+
+	// TurnRate mexe nos dois eixos juntos: eles sao mantidos iguais de
+	// proposito, pra mirar em 3D ser simetrico.
+	Tuning::Apply(CVarPlaneTurnRate, FlightParams.PitchRateDegPerSec);
+	Tuning::Apply(CVarPlaneTurnRate, FlightParams.YawRateDegPerSec);
+	FlightPhysics.SetParams(FlightParams);
+
+	FFuelParams TunedFuel;
+	Tuning::Apply(CVarFuelTankCapacity, TunedFuel.TankCapacity);
+	Tuning::Apply(CVarFuelBoostDrain, TunedFuel.BoostDrainPerSec);
+	Tuning::Apply(CVarFuelRegen, TunedFuel.PassiveRegenPerSec);
+	Tuning::Apply(CVarFuelRespawnSeconds, TunedFuel.RespawnSeconds);
+	FuelSystem.SetParams(TunedFuel);
+
+	CollisionRadius = DefaultCollisionRadius;
+	Tuning::Apply(CVarPlaneCollisionRadius, CollisionRadius);
 }
 
 void APlanePawn::ResetFlightStateTo(const FTransform& Transform)

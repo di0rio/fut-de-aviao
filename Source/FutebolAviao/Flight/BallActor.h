@@ -25,6 +25,8 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
+	void ApplyTuningCVars();
+
 	UPROPERTY(VisibleAnywhere, Category = "Ball")
 	UStaticMeshComponent* MeshComponent;
 
