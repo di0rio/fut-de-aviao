@@ -1,23 +1,11 @@
 #include "FlightPhysics.h"
+#include "PureMath.h"
 #include <cmath>
+
+using namespace PureMath;
 
 namespace
 {
-	float ClampValue(float Value, float Min, float Max)
-	{
-		if (Value < Min) return Min;
-		if (Value > Max) return Max;
-		return Value;
-	}
-
-	float WrapDegrees(float Degrees)
-	{
-		float Wrapped = Degrees;
-		while (Wrapped >= 360.f) Wrapped -= 360.f;
-		while (Wrapped < 0.f) Wrapped += 360.f;
-		return Wrapped;
-	}
-
 	constexpr float Pi = 3.14159265358979323846f;
 
 	// Reproduz a formula de FRotator::Vector() da Unreal: so depende de pitch e
