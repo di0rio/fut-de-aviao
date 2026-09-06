@@ -19,6 +19,26 @@ namespace
 		}
 		return false;
 	}
+
+	// Normal do impacto: da bola pro aviao, com os mesmos fallbacks usados por
+	// ApplyHit de sempre. Compartilhada por ApplyImpulse e PushOutOf pra que,
+	// chamadas em sequencia sem a posicao mudar entre elas, produzam a mesma
+	// normal que o ApplyHit combinado sempre produziu.
+	PureMath::FPureVector ComputeHitNormal(const PureMath::FPureVector& BallPosition, const PureMath::FPureVector& PlanePosition, const PureMath::FPureVector& PlaneVelocity)
+	{
+		PureMath::FPureVector Normal = PureMath::Normalized(PureMath::Subtract(BallPosition, PlanePosition));
+		if (PureMath::Length(Normal) < 0.5f)
+		{
+			// Aviao exatamente em cima da bola: nao ha direcao definida. Chuta pra
+			// frente do aviao, que e a unica direcao com significado aqui.
+			Normal = PureMath::Normalized(PlaneVelocity);
+			if (PureMath::Length(Normal) < 0.5f)
+			{
+				Normal.Z = 1.f;   // aviao parado tambem: joga pra cima
+			}
+		}
+		return Normal;
+	}
 }
 
 void FBallPhysics::Update(FBallState& State, float DeltaSeconds) const
@@ -63,17 +83,13 @@ bool FBallPhysics::IsOverlapping(const FBallState& State, const PureMath::FPureV
 
 void FBallPhysics::ApplyHit(FBallState& State, const PureMath::FPureVector& PlanePosition, const PureMath::FPureVector& PlaneVelocity, float PlaneRadius) const
 {
-	PureMath::FPureVector Normal = PureMath::Normalized(PureMath::Subtract(State.Position, PlanePosition));
-	if (PureMath::Length(Normal) < 0.5f)
-	{
-		// Aviao exatamente em cima da bola: nao ha direcao definida. Chuta pra
-		// frente do aviao, que e a unica direcao com significado aqui.
-		Normal = PureMath::Normalized(PlaneVelocity);
-		if (PureMath::Length(Normal) < 0.5f)
-		{
-			Normal.Z = 1.f;   // aviao parado tambem: joga pra cima
-		}
-	}
+	ApplyImpulse(State, PlanePosition, PlaneVelocity);
+	PushOutOf(State, PlanePosition, PlaneVelocity, PlaneRadius);
+}
+
+void FBallPhysics::ApplyImpulse(FBallState& State, const PureMath::FPureVector& PlanePosition, const PureMath::FPureVector& PlaneVelocity) const
+{
+	const PureMath::FPureVector Normal = ComputeHitNormal(State.Position, PlanePosition, PlaneVelocity);
 
 	const float Approach = PureMath::Dot(PlaneVelocity, Normal);
 	const float Impulse = (Approach > 0.f ? Approach * Params.HitTransfer : 0.f) + Params.MinKick;
@@ -85,6 +101,12 @@ void FBallPhysics::ApplyHit(FBallState& State, const PureMath::FPureVector& Plan
 	{
 		State.Velocity = PureMath::Scale(PureMath::Normalized(State.Velocity), Params.MaxSpeed);
 	}
+}
 
+void FBallPhysics::PushOutOf(FBallState& State, const PureMath::FPureVector& PlanePosition, const PureMath::FPureVector& PlaneVelocity, float PlaneRadius) const
+{
+	// Mesma normal que ApplyImpulse usou -- a posicao da bola nao mudou entre
+	// as duas chamadas, entao ComputeHitNormal devolve o mesmo vetor.
+	const PureMath::FPureVector Normal = ComputeHitNormal(State.Position, PlanePosition, PlaneVelocity);
 	State.Position = PureMath::Add(PlanePosition, PureMath::Scale(Normal, Params.Radius + PlaneRadius));
 }

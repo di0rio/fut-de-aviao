@@ -44,6 +44,14 @@ public:
 
 	PureMath::FPureVector GetPureVelocity() const { return FlightState.Velocity; }
 
+	// A regra de verdade e "destruido, aguardando respawn" -- esconder o ator
+	// (SetActorHiddenInGame) e so o efeito colateral de hoje dessa regra, nao a
+	// regra em si. Qualquer outra coisa que esconda o aviao no futuro
+	// (espectador, cinematica, relevancia de rede) nao deve, por si so, tirar
+	// o aviao da jogada.
+	UFUNCTION(BlueprintCallable, Category = "Plane")
+	bool IsFlying() const { return !FuelState.bIsDestroyed; }
+
 private:
 	// Zera o FlightState e o reancora na posicao e rotacao de Transform, usado
 	// tanto no spawn inicial quanto no respawn.
