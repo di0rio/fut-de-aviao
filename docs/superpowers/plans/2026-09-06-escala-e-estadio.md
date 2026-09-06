@@ -542,21 +542,52 @@ Mudar temporariamente `ARENA_HALF_X` no Python para `19000.0`, rodar o commandle
 
 As paredes retas das laterais longas viram arquibancadas inclinadas. **A inclinação é puramente visual** — a física da bola quica numa caixa alinhada aos eixos e continua quicando no plano reto em `±ArenaHalfY`. As arquibancadas ficam *atrás* desse limite, nunca em cima dele.
 
-Substituir o laço que hoje cria `Parede_Norte` / `Parede_Sul` por:
+**Antes do visual, o contencao.** A bola e limitada por matematica pura e nunca escapa, mas o aviao se move com `AddActorWorldOffset(..., bSweep=true)`, que colide contra malha de verdade. Se nao houver parede na altura toda, o aviao sai voando da arena pelos lados. As paredes de hoje param perto de Z=5000, e o teto novo esta em 12000 — o vao entre os dois e por onde ele foge.
+
+Substituir o laço que hoje cria `Parede_Norte` / `Parede_Sul` por uma parede de contencao de altura cheia **mais** as arquibancadas atras dela:
 
 ```python
-    # Arquibancadas: tres degraus inclinados por lado, subindo pra fora do campo.
-    # Puramente visual -- o limite fisico continua sendo o plano reto em
-    # +-ARENA_HALF_Y (ver BounceAxis em BallPhysics.cpp).
+    # Parede de contencao: exatamente em +-ARENA_HALF_Y, do chao ao teto. E ela
+    # que impede o aviao de sair voando da arena -- o aviao colide com malha de
+    # verdade (AddActorWorldOffset com sweep), diferente da bola, que e limitada
+    # so por matematica em BallPhysics.cpp. Parede baixa demais = aviao escapa
+    # por cima.
+    for side, sign in (("Norte", 1.0), ("Sul", -1.0)):
+        spawn_box(actors, "Parede_" + side,
+                  unreal.Vector(0.0, sign * ARENA_HALF_Y, ARENA_CEILING_Z / 2.0),
+                  unreal.Vector(ARENA_HALF_X * 2 / 100.0, 1.0, ARENA_CEILING_Z / 100.0))
+
+    # Arquibancadas: tres degraus, ATRAS da parede de contencao (|Y| maior que
+    # ARENA_HALF_Y), nunca em cima dela. Puramente visuais -- o limite fisico
+    # continua sendo o plano reto em +-ARENA_HALF_Y.
     for side, sign in (("Norte", 1.0), ("Sul", -1.0)):
         for tier in range(3):
-            tier_height = 2000.0 + tier * 2500.0
-            tier_offset = tier * 1800.0
+            tier_height = 3000.0 + tier * 3000.0
+            tier_offset = 1000.0 + tier * 2000.0
             spawn_box(actors, "Arquibancada_%s_%d" % (side, tier),
                       unreal.Vector(0.0,
                                     sign * (ARENA_HALF_Y + tier_offset),
                                     tier_height / 2.0),
                       unreal.Vector(ARENA_HALF_X * 2 / 100.0, 8.0, tier_height / 100.0))
+```
+
+Os fundos e os travessoes tambem ficaram para tras da mudanca de escala: hoje o laco que cria `Fundo_*` e `Travessao_*` usa `Z=2500` com escala `50` (topo em 5000) e `GOAL_HEIGHT_Z + 1500` com escala `30`. Ajustar os dois para irem ate `ARENA_CEILING_Z`:
+
+```python
+    # Fundos: laterais da boca do gol, do chao ao teto.
+    for side, sign in (("Oeste", -1.0), ("Leste", 1.0)):
+        side_width = ARENA_HALF_Y - GOAL_HALF_WIDTH_Y
+        for edge, edge_sign in (("A", 1.0), ("B", -1.0)):
+            center_y = edge_sign * (GOAL_HALF_WIDTH_Y + side_width / 2.0)
+            spawn_box(actors, "Fundo_%s_%s" % (side, edge),
+                      unreal.Vector(sign * ARENA_HALF_X, center_y, ARENA_CEILING_Z / 2.0),
+                      unreal.Vector(1.0, side_width / 100.0, ARENA_CEILING_Z / 100.0))
+
+        # Travessao: fecha do topo da boca ate o teto.
+        beam_height = ARENA_CEILING_Z - GOAL_HEIGHT_Z
+        spawn_box(actors, "Travessao_" + side,
+                  unreal.Vector(sign * ARENA_HALF_X, 0.0, GOAL_HEIGHT_Z + beam_height / 2.0),
+                  unreal.Vector(1.0, GOAL_HALF_WIDTH_Y * 2 / 100.0, beam_height / 100.0))
 ```
 
 - [ ] **Step 4: Marcações no chão**
@@ -626,7 +657,9 @@ As torres de canto ancoram a orientação; as pontas diferentes respondem "para 
 Rodar o commandlet, depois **carregar o nível de volta** com o script de verificação da Task 1 Step 7 e conferir:
 
 - o teto existe, em Z = 12000
-- as arquibancadas estão em `|Y| >= 12000` (fora do limite físico, nunca dentro)
+- **a parede de contenção vai do chão ao teto** — `Parede_Norte`/`Parede_Sul` centradas em Z = 6000 com escala Z = 120 (ou seja, 0 a 12000). Sem isso o avião sai voando pelos lados.
+- **os fundos e os travessões também chegam ao teto** — nenhum topo parando em 5000 ou 7000
+- as arquibancadas estão em `|Y| > 12000` (atrás do limite físico, nunca em cima dele)
 - as marcações estão em Z ≈ 70, baixas
 - as duas pontas têm marcos de alturas diferentes
 
