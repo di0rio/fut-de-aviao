@@ -125,6 +125,37 @@ static void Test_BallFlyingIntoTheGoalMouthPassesThrough()
 	printf("Test_BallFlyingIntoTheGoalMouthPassesThrough passed\n");
 }
 
+static void Test_IsOverlappingDetectsContactAndSeparation()
+{
+	FBallPhysicsParams Params;
+	Params.Radius = 150.f;
+	FBallPhysics Ball(Params);
+	FBallState State;   // bola na origem
+
+	const float PlaneRadius = 300.f;
+	const float RadiiSum = Params.Radius + PlaneRadius;   // 450
+
+	PureMath::FPureVector Plane;
+
+	// Centros bem mais pertos que a soma dos raios: claramente sobrepondo.
+	Plane.X = 100.f;
+	assert(Ball.IsOverlapping(State, Plane, PlaneRadius) == true);
+
+	// Centros bem mais longe que a soma dos raios: claramente separadas.
+	Plane.X = 1000.f;
+	assert(Ball.IsOverlapping(State, Plane, PlaneRadius) == false);
+
+	// Um pouco dentro da fronteira (distancia < soma dos raios): ainda sobrepondo.
+	Plane.X = RadiiSum - 1.f;
+	assert(Ball.IsOverlapping(State, Plane, PlaneRadius) == true);
+
+	// Um pouco fora da fronteira (distancia > soma dos raios): ja separadas.
+	Plane.X = RadiiSum + 1.f;
+	assert(Ball.IsOverlapping(State, Plane, PlaneRadius) == false);
+
+	printf("Test_IsOverlappingDetectsContactAndSeparation passed\n");
+}
+
 static void Test_BallHittingTheBackWallOutsideTheMouthStillBounces()
 {
 	FBallPhysicsParams Params;
@@ -152,6 +183,7 @@ int main()
 	Test_PlaneHitPushesTheBallAway();
 	Test_StationaryPlaneStillNudgesTheBall();
 	Test_BallFlyingIntoTheGoalMouthPassesThrough();
+	Test_IsOverlappingDetectsContactAndSeparation();
 	Test_BallHittingTheBackWallOutsideTheMouthStillBounces();
 	printf("All tests passed\n");
 	return 0;
