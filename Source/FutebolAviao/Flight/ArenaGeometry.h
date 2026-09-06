@@ -14,12 +14,12 @@
 struct FArenaGeometry
 {
 	// Arena: caixa fechada. X e Y sao metades; o chao e Z=0.
-	float ArenaHalfX = 10000.f;
-	float ArenaHalfY = 6000.f;
-	float ArenaCeilingZ = 5000.f;
+	float ArenaHalfX = 20000.f;      // 400m de comprimento
+	float ArenaHalfY = 12000.f;      // 240m de largura
+	float ArenaCeilingZ = 12000.f;   // 120m de altura
 
 	// Boca do gol: um retangulo aberto nas duas paredes de fundo (X =
 	// +-ArenaHalfX), centrado em Y=0 e indo do chao ate GoalHeightZ.
-	float GoalHalfWidthY = 1500.f;
-	float GoalHeightZ = 2000.f;
+	float GoalHalfWidthY = 3000.f;   // boca de 60m
+	float GoalHeightZ = 4000.f;      // 40m de altura
 };
