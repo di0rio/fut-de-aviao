@@ -19,6 +19,23 @@ static void Test_BallInsideWestGoalCountsForEast()
 	printf("Test_BallInsideWestGoalCountsForEast passed\n");
 }
 
+static void Test_BallInsideEastGoalCountsForWest()
+{
+	FMatchParams Params;
+	Params.Arena.ArenaHalfX = 10000.f;
+	Params.Arena.GoalHalfWidthY = 1500.f;
+	Params.Arena.GoalHeightZ = 2000.f;
+	FMatchRules Rules(Params);
+
+	PureMath::FPureVector Ball;
+	Ball.X = 10050.f;   // passou da linha leste
+	Ball.Y = 0.f;
+	Ball.Z = 800.f;
+
+	assert(Rules.CheckGoal(Ball) == EGoalSide::East);
+	printf("Test_BallInsideEastGoalCountsForWest passed\n");
+}
+
 static void Test_BallPastTheLineButOutsideTheMouthIsNotAGoal()
 {
 	FMatchParams Params;
@@ -60,6 +77,7 @@ static void Test_RegisteringGoalsIncrementsTheRightSide()
 int main()
 {
 	Test_BallInsideWestGoalCountsForEast();
+	Test_BallInsideEastGoalCountsForWest();
 	Test_BallPastTheLineButOutsideTheMouthIsNotAGoal();
 	Test_RegisteringGoalsIncrementsTheRightSide();
 	printf("All tests passed\n");
