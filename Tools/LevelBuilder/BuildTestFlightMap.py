@@ -29,6 +29,19 @@ ARENA_CEILING_Z = 12000.0
 GOAL_HALF_WIDTH_Y = 3000.0
 GOAL_HEIGHT_Z = 4000.0
 
+# Profundidade da rede atras de cada gol (decoracao de nivel, sem equivalente
+# em C++ -- MatchRules.cpp so olha a boca do gol via matematica pura, entao
+# GOAL_DEPTH nao entra em check_matches_cpp()). ~40m: da pra ler como gol e
+# ainda sobra espaco pro aviao desacelerar antes do fundo.
+GOAL_DEPTH = 4000.0
+
+# Espessura real (em unidades de mundo) de uma "parede fina" feita com
+# spawn_box usando escala 1.0 no eixo perpendicular -- o cubo do Engine tem
+# 100 de lado. Usado para deslocar os paineis da rede pra FORA da boca do gol
+# em vez de centra-los em cima do limite (que e o que Parede_Norte/Sul e
+# Fundo_*/Travessao_* fazem, e que deixaria metade do painel invadindo o vao).
+THIN_WALL_WORLD_THICKNESS = 100.0
+
 # Altura dos PlayerStarts: o aviao nasce ja no ar, sem gravidade (ver FFlightPhysics).
 PLAYER_START_Z = 1500.0
 
@@ -171,6 +184,50 @@ def build():
                   unreal.Vector(sign * ARENA_HALF_X, 0.0, GOAL_HEIGHT_Z + beam_height / 2.0),
                   unreal.Vector(1.0, GOAL_HALF_WIDTH_Y * 2 / 100.0, beam_height / 100.0))
 
+    # Rede do gol: caixa fechada atras de cada boca, aberta so para o campo.
+    # Achado da revisao: Marco_Leste bloqueava a boca do gol Leste e o gol
+    # Oeste nao tinha nada -- um aviao que entrava pelo gol saia voando pra
+    # sempre (o GameModeBase so reresseta a bola no gol, nunca o aviao). A
+    # bola continua marcando gol por matematica pura (MatchRules.cpp nao olha
+    # malha nenhuma); a rede so para o aviao.
+    #
+    # Cada painel e deslocado para FORA do limite que fecha (metade da
+    # espessura de THIN_WALL_WORLD_THICKNESS), ao contrario de
+    # Parede_Norte/Sul e Fundo_*/Travessao_*, que centralizam em cima do
+    # limite -- aqui isso invadiria a boca do gol ou baixaria o teto da rede
+    # abaixo de GOAL_HEIGHT_Z, exatamente os dois jeitos de a rede quebrar a
+    # propria funcao.
+    half_thin_wall = THIN_WALL_WORLD_THICKNESS / 2.0
+    for side, sign in (("Oeste", -1.0), ("Leste", 1.0)):
+        depth_center_x = sign * (ARENA_HALF_X + GOAL_DEPTH / 2.0)
+        back_x = sign * (ARENA_HALF_X + GOAL_DEPTH)
+
+        # Fundo da rede: fecha a caixa por tras, do chao ate a altura do gol.
+        # A face interna fica em back_x - sinal*half_thin_wall, sempre alem de
+        # ARENA_HALF_X (GOAL_DEPTH e muito maior que a espessura da parede).
+        spawn_box(actors, "Rede_Fundo_" + side,
+                  unreal.Vector(back_x, 0.0, GOAL_HEIGHT_Z / 2.0),
+                  unreal.Vector(1.0, GOAL_HALF_WIDTH_Y * 2 / 100.0, GOAL_HEIGHT_Z / 100.0))
+
+        # Paredes laterais: ligam a linha do gol (ARENA_HALF_X) ao fundo da
+        # rede. Centralizadas em GOAL_HALF_WIDTH_Y + half_thin_wall, entao a
+        # face interna cai exatamente em GOAL_HALF_WIDTH_Y -- nunca menos,
+        # nunca invadindo o vao por onde a bola/aviao entram.
+        for edge, edge_sign in (("A", 1.0), ("B", -1.0)):
+            spawn_box(actors, "Rede_Lateral_%s_%s" % (side, edge),
+                      unreal.Vector(depth_center_x,
+                                    edge_sign * (GOAL_HALF_WIDTH_Y + half_thin_wall),
+                                    GOAL_HEIGHT_Z / 2.0),
+                      unreal.Vector(GOAL_DEPTH / 100.0, 1.0, GOAL_HEIGHT_Z / 100.0))
+
+        # Teto da rede: fecha por cima cobrindo toda a profundidade GOAL_DEPTH.
+        # Centralizado em GOAL_HEIGHT_Z + half_thin_wall, entao a face de baixo
+        # cai exatamente em GOAL_HEIGHT_Z -- nunca desce abaixo disso e reduz
+        # o vao livre da boca.
+        spawn_box(actors, "Rede_Teto_" + side,
+                  unreal.Vector(depth_center_x, 0.0, GOAL_HEIGHT_Z + half_thin_wall),
+                  unreal.Vector(GOAL_DEPTH / 100.0, GOAL_HALF_WIDTH_Y * 2 / 100.0, 1.0))
+
     MARK_Z = 70.0
     MARK_THICKNESS = 0.4   # em unidades de cubo (100), ou seja 40 unidades
 
@@ -212,13 +269,21 @@ def build():
     # Silhuetas distintas por ponta: e o que diz de relance pra que lado voce
     # esta voando. Oeste = duas torres altas e finas; Leste = um bloco largo e
     # baixo. Sem cor de proposito -- exigiria instancia de material.
+    #
+    # Achado da revisao: as duas pontas ficavam em ARENA_HALF_X + 3000, o que
+    # cai DENTRO da caixa da rede do gol (que agora vai ate ARENA_HALF_X +
+    # GOAL_DEPTH = ate 24000 -- Marco_Leste virava uma parede a mais bloqueando
+    # a boca). Empurradas para alem da rede, com folga (+4000 depois do fundo
+    # da rede), derivado das mesmas constantes -- nunca um literal solto que
+    # combinava por acaso com a escala antiga.
+    MARCO_X = ARENA_HALF_X + GOAL_DEPTH + 4000.0
     for edge_sign in (1.0, -1.0):
         spawn_box(actors, "Marco_Oeste_%d" % int(edge_sign),
-                  unreal.Vector(-(ARENA_HALF_X + 3000.0), edge_sign * 4000.0, 11000.0),
+                  unreal.Vector(-MARCO_X, edge_sign * 4000.0, 11000.0),
                   unreal.Vector(15.0, 15.0, 220.0))
 
     spawn_box(actors, "Marco_Leste",
-              unreal.Vector(ARENA_HALF_X + 3000.0, 0.0, 3000.0),
+              unreal.Vector(MARCO_X, 0.0, 3000.0),
               unreal.Vector(20.0, 140.0, 60.0))
 
     # Teto: fecha a arena por cima em Z = ArenaCeilingZ, cobrindo toda a
