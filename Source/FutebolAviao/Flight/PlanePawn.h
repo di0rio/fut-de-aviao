@@ -36,6 +36,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Plane")
 	void SetSpawnTransform(const FTransform& NewSpawnTransform);
 
+	// A bola precisa saber onde o aviao esta e quao rapido vai, pra resolver o
+	// impacto. Raio esferico aproximado do aviao, generoso de proposito: acertar
+	// a bola tem que ser divertido, nao preciso.
+	UFUNCTION(BlueprintCallable, Category = "Plane")
+	float GetCollisionRadius() const { return 300.f; }
+
+	PureMath::FPureVector GetPureVelocity() const { return FlightState.Velocity; }
+
 private:
 	// Zera o FlightState e o reancora na posicao e rotacao de Transform, usado
 	// tanto no spawn inicial quanto no respawn.
