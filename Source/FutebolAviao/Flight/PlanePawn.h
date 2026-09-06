@@ -40,7 +40,7 @@ public:
 	// impacto. Raio esferico aproximado do aviao, generoso de proposito: acertar
 	// a bola tem que ser divertido, nao preciso.
 	UFUNCTION(BlueprintCallable, Category = "Plane")
-	float GetCollisionRadius() const { return 600.f; }
+	float GetCollisionRadius() const { return CollisionRadius; }
 
 	PureMath::FPureVector GetPureVelocity() const { return FlightState.Velocity; }
 
@@ -56,6 +56,13 @@ private:
 	// Zera o FlightState e o reancora na posicao e rotacao de Transform, usado
 	// tanto no spawn inicial quanto no respawn.
 	void ResetFlightStateTo(const FTransform& Transform);
+
+	void ApplyTuningCVars();
+
+	// Um unico lugar define o default; ApplyTuningCVars restaura a partir dele
+	// todo tick, pra que voltar a CVar pra -1 volte de fato ao default.
+	static constexpr float DefaultCollisionRadius = 600.f;
+	float CollisionRadius = DefaultCollisionRadius;
 
 	UPROPERTY(VisibleAnywhere, Category = "Plane")
 	UStaticMeshComponent* MeshComponent;

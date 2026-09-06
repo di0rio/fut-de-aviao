@@ -3,6 +3,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "EngineUtils.h"
+#include "../Tuning/TuningCVars.h"
 
 namespace
 {
@@ -19,6 +20,14 @@ namespace
 	{
 		return FVector(V.X, V.Y, V.Z);
 	}
+
+	TAutoConsoleVariable<float> CVarBallMaxSpeed(TEXT("fa.Ball.MaxSpeed"), -1.f, TEXT("Teto de velocidade da bola, cm/s. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarBallGravity(TEXT("fa.Ball.Gravity"), -1.f, TEXT("Gravidade da bola, cm/s2. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarBallDrag(TEXT("fa.Ball.Drag"), -1.f, TEXT("Fracao da velocidade perdida por segundo. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarBallRestitution(TEXT("fa.Ball.Restitution"), -1.f, TEXT("Quanto da velocidade sobra depois de quicar. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarBallHitTransfer(TEXT("fa.Ball.HitTransfer"), -1.f, TEXT("Quanto da velocidade do aviao vira impulso. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarBallMinKick(TEXT("fa.Ball.MinKick"), -1.f, TEXT("Impulso minimo de um toque de raspao. -1 usa o default."));
+	TAutoConsoleVariable<float> CVarBallRadius(TEXT("fa.Ball.Radius"), -1.f, TEXT("Raio da bola. Reescala a malha junto. -1 usa o default."));
 }
 
 ABallActor::ABallActor()
@@ -55,6 +64,7 @@ void ABallActor::ResetToCenter()
 void ABallActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	ApplyTuningCVars();
 
 	// Primeiro colhe todos os avioes que estao tocando a bola neste frame, em
 	// vez de resolver aviao a aviao dentro do proprio laco do TActorIterator.
@@ -112,4 +122,30 @@ void ABallActor::Tick(float DeltaSeconds)
 
 	BallPhysics.Update(BallState, DeltaSeconds);
 	SetActorLocation(ToUnreal(BallState.Position));
+}
+
+void ABallActor::ApplyTuningCVars()
+{
+	// Como no aviao: parte dos defaults puros, nunca dos params atuais, senao
+	// um valor de CVar nunca mais sai depois de setado.
+	const float PreviousRadius = BallPhysics.GetParams().Radius;
+	FBallPhysicsParams Params;
+
+	Tuning::Apply(CVarBallMaxSpeed, Params.MaxSpeed);
+	Tuning::Apply(CVarBallGravity, Params.Gravity);
+	Tuning::Apply(CVarBallDrag, Params.Drag);
+	Tuning::Apply(CVarBallRestitution, Params.Restitution);
+	Tuning::Apply(CVarBallHitTransfer, Params.HitTransfer);
+	Tuning::Apply(CVarBallMinKick, Params.MinKick);
+	Tuning::Apply(CVarBallRadius, Params.Radius);
+
+	BallPhysics.SetParams(Params);
+
+	// A malha precisa acompanhar o raio, senao o visual e a colisao divergem
+	// e o jogador passa a mirar num lugar onde a bola nao esta.
+	if (Params.Radius != PreviousRadius && MeshComponent)
+	{
+		const float Scale = Params.Radius / 50.f;
+		MeshComponent->SetRelativeScale3D(FVector(Scale, Scale, Scale));
+	}
 }
