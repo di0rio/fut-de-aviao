@@ -165,7 +165,7 @@ static void Test_RespawnResetsPostBoostRegenDelay()
 	//
 	// A fixture entra no estado destruido DIRETAMENTE, sem boostar antes: se
 	// chegasse la boostando, o proprio branch de boost ja teria zerado
-	// TimeSinceBoostSec, e a asserção final passaria mesmo que a linha que
+	// TimeSinceBoostSec, e a assercao final passaria mesmo que a linha que
 	// zera o relogio no respawn fosse apagada. Comecando com o default de
 	// 1000.f (definido em FFuelState) e nunca tocando em TimeSinceBoostSec
 	// fora do respawn, so o codigo do respawn pode zera-lo.
@@ -199,7 +199,7 @@ static void Test_ResolveBoostDoesNotReengageAfterRespawnWhenInputCleared()
 	// verde.
 	//
 	// O que este teste de fato verifica: que FFuelSystem::ResolveBoost, dado um
-	// pedido de boost que já foi "limpo" (bBoostRequested == false) apos um
+	// pedido de boost que ja foi "limpo" (bBoostRequested == false) apos um
 	// ciclo destruir/respawnar, nao reengata o boost sozinho - e que, se o
 	// pedido NAO fosse limpo, ResolveBoost reengataria (mostrando por que o
 	// pawn precisa limpar). Isto cobre a aritmetica pura de ResolveBoost/
