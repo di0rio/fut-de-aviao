@@ -20,7 +20,7 @@ namespace
 
 	constexpr float Pi = 3.14159265358979323846f;
 
-	// Reproduz FRotator::Vector() da Unreal exatamente: so depende de pitch e
+	// Reproduz a formula de FRotator::Vector() da Unreal: so depende de pitch e
 	// yaw. Roll nao entra na conta, igual a engine - por isso hoje o roll e
 	// puramente decorativo (ver docs/superpowers/specs/2026-09-05-modelo-de-voo.md).
 	FFlightVector ForwardFromAngles(float PitchDeg, float YawDeg)
