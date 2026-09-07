@@ -249,7 +249,12 @@ def build():
                   unreal.Vector(GOAL_DEPTH / 100.0, GOAL_HALF_WIDTH_Y * 2 / 100.0, 1.0))
 
     MARK_Z = 70.0
-    MARK_THICKNESS = 0.4   # em unidades de cubo (100), ou seja 40 unidades
+    # Achado da revisao: 0.4 (40 unidades) e a largura real de uma linha de
+    # campo -- em Escala 1:1 (400m de campo, aviao a 45 m/s vindo de 25m
+    # atras), isso e visualmente insignificante. Subido para 6.0 (6m, ainda
+    # so 1.5% do campo) para que as marcacoes deem de verdade a referencia
+    # de posicao e velocidade pra qual foram feitas.
+    MARK_THICKNESS = 6.0   # em unidades de cubo (100), ou seja 600 unidades
 
     # Linha de meio-campo, cruzando a largura.
     spawn_box(actors, "Marca_MeioCampo",
