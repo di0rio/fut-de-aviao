@@ -35,7 +35,7 @@ void FFuelSystem::Update(FFuelState& State, bool bBoostActive, float DeltaSecond
 
 	State.Fuel = ClampValue(State.Fuel, 0.f, Params.TankCapacity);
 
-	if (State.Fuel <= 0.f && !State.bIsDestroyed)
+	if (State.Fuel <= 0.f)
 	{
 		State.bIsDestroyed = true;
 		State.RespawnTimer = Params.RespawnSeconds;

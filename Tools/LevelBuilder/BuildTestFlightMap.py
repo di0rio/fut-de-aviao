@@ -11,6 +11,10 @@ O nivel e criado sem World Partition de proposito: assim vira um unico .umap
 versionavel, em vez de uma arvore de __ExternalActors__.
 """
 
+import math
+import os
+import re
+
 import unreal
 
 LEVEL_PATH = "/Game/Maps/TestFlightMap"
@@ -61,8 +65,6 @@ PLAYER_START_X = ARENA_HALF_X - 4000.0
 # precisa cobrir os 400m x 240m da arena nova (o cubo da engine tem 100 de lado).
 FLOOR_SCALE = unreal.Vector(ARENA_HALF_X * 2 / 100.0, ARENA_HALF_Y * 2 / 100.0, 1.0)
 
-import os
-import re
 
 def check_matches_cpp():
     """Falha alto se as constantes daqui divergirem de ArenaGeometry.h.
@@ -262,7 +264,6 @@ def build():
               unreal.Vector(MARK_THICKNESS, ARENA_HALF_Y * 2 / 100.0, 0.2))
 
     # Circulo central aproximado por 16 blocos, raio de 4000.
-    import math
     for i in range(16):
         angle = (2.0 * math.pi * i) / 16.0
         spawn_box(actors, "Marca_Circulo_%d" % i,
