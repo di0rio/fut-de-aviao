@@ -234,6 +234,20 @@ def build():
                   unreal.Vector(depth_center_x, 0.0, GOAL_HEIGHT_Z + half_thin_wall),
                   unreal.Vector(GOAL_DEPTH / 100.0, GOAL_HALF_WIDTH_Y * 2 / 100.0, 1.0))
 
+        # Chao da rede: a caixa da rede nao tinha piso -- o chao geral da
+        # arena (FLOOR_SCALE) para exatamente na linha de gol (X = +-
+        # ARENA_HALF_X), entao os 4000 de profundidade da caixa (X entre
+        # ARENA_HALF_X e back_x) ficavam sem nada embaixo. Um aviao entrando
+        # na boca numa picada rasa atravessava o vao e caia pra fora do
+        # nivel, sem que o GameMode resetasse nada (ele so reresseta a
+        # bola). Mesma convencao do Rede_Teto, espelhada: centralizado em
+        # -half_thin_wall, entao a face de CIMA cai exatamente em Z=0 --
+        # nao fica mais baixa que o chao da arena nem sobe pra dentro do
+        # vao.
+        spawn_box(actors, "Rede_Chao_" + side,
+                  unreal.Vector(depth_center_x, 0.0, -half_thin_wall),
+                  unreal.Vector(GOAL_DEPTH / 100.0, GOAL_HALF_WIDTH_Y * 2 / 100.0, 1.0))
+
     MARK_Z = 70.0
     MARK_THICKNESS = 0.4   # em unidades de cubo (100), ou seja 40 unidades
 
