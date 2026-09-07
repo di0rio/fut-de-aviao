@@ -280,31 +280,65 @@ def build():
                       unreal.Vector(AREA_DEPTH / 100.0, MARK_THICKNESS, 0.2))
 
     # Torres nos quatro cantos: referencia de orientacao a distancia.
+    #
+    # Achado da revisao: ficavam em |Y| = ARENA_HALF_Y exatamente, com escala
+    # 12 no eixo Y -- ou seja, 600 unidades de meia-escala invadindo PARA
+    # DENTRO da arena (ate Y = 11400). A parede de contencao (Parede_Norte/
+    # Sul) e so 100 de espessura, entao o aviao colidia com a malha da torre
+    # (que tem colisao de verdade), enquanto a bola -- limitada so por
+    # matematica pura em BallPhysics.cpp, que conhece apenas o plano em
+    # ARENA_HALF_Y -- quicava exatamente ali e atravessava por baixo da
+    # malha sem nada a impedir. Essa assimetria era sentida nos quatro
+    # cantos. Empurradas por sua propria meia-escala em Y, a face interna da
+    # torre cai sobre a parede em vez de invadir o espaco de jogo.
+    TOWER_SCALE = unreal.Vector(12.0, 12.0, 180.0)
+    TOWER_CLEARANCE_Y = TOWER_SCALE.y * 50.0   # meia-escala do cubo, em unidades de mundo
     for x_side, x_sign in (("O", -1.0), ("L", 1.0)):
         for y_side, y_sign in (("N", 1.0), ("S", -1.0)):
             spawn_box(actors, "Torre_%s%s" % (x_side, y_side),
-                      unreal.Vector(x_sign * ARENA_HALF_X, y_sign * ARENA_HALF_Y, 9000.0),
-                      unreal.Vector(12.0, 12.0, 180.0))
+                      unreal.Vector(x_sign * ARENA_HALF_X,
+                                    y_sign * (ARENA_HALF_Y + TOWER_CLEARANCE_Y),
+                                    9000.0),
+                      TOWER_SCALE)
 
-    # Silhuetas distintas por ponta: e o que diz de relance pra que lado voce
-    # esta voando. Oeste = duas torres altas e finas; Leste = um bloco largo e
-    # baixo. Sem cor de proposito -- exigiria instancia de material.
+    # Marcos de identidade: dizem de relance pra que lado voce esta voando.
     #
-    # Achado da revisao: as duas pontas ficavam em ARENA_HALF_X + 3000, o que
-    # cai DENTRO da caixa da rede do gol (que agora vai ate ARENA_HALF_X +
-    # GOAL_DEPTH = ate 24000 -- Marco_Leste virava uma parede a mais bloqueando
-    # a boca). Empurradas para alem da rede, com folga (+4000 depois do fundo
-    # da rede), derivado das mesmas constantes -- nunca um literal solto que
-    # combinava por acaso com a escala antiga.
-    MARCO_X = ARENA_HALF_X + GOAL_DEPTH + 4000.0
+    # Achado da revisao: a arena e uma caixa fechada de seis faces opacas
+    # (Parede_Norte/Sul, Fundo_*/Travessao_*, Teto) -- entao qualquer coisa
+    # do lado de FORA dela (as arquibancadas, e os marcos antigos em
+    # ARENA_HALF_X + GOAL_DEPTH + 4000) fica atras de paredes opacas e nunca
+    # aparece durante o jogo, so no editor olhando o nivel de fora. Isso
+    # matava a unica pista de orientacao "pra que lado eu estou indo" que a
+    # Fase 3 tentou dar.
+    #
+    # Fix: presos do lado de DENTRO do casco, na face interna da parede de
+    # fundo de cada ponta, com uma protrusao rasa (MARKER_DEPTH) onde o
+    # aviao raramente voa -- nao comem espaco de jogo de verdade. Formas
+    # deliberadamente diferentes por ponta (sem cor, que exigiria instancia
+    # de material):
+    #   Oeste = dois pilares altos e finos, flanqueando a boca do gol, fora
+    #           de |Y| < GOAL_HALF_WIDTH_Y para nunca bloquear um chute.
+    #   Leste = uma faixa larga e baixa, acima do travessao (Z a partir de
+    #           GOAL_HEIGHT_Z) para nunca fechar a boca do gol por cima.
+    MARKER_DEPTH = 600.0   # protrusao para dentro da arena, a partir da parede de fundo
+
+    WEST_PILLAR_Y = GOAL_HALF_WIDTH_Y + 1000.0     # fora da boca, com folga
+    WEST_PILLAR_WIDTH_Y = 400.0
+    WEST_PILLAR_HEIGHT = ARENA_CEILING_Z - 2000.0  # alcanca quase todo o teto
     for edge_sign in (1.0, -1.0):
         spawn_box(actors, "Marco_Oeste_%d" % int(edge_sign),
-                  unreal.Vector(-MARCO_X, edge_sign * 4000.0, 11000.0),
-                  unreal.Vector(15.0, 15.0, 220.0))
+                  unreal.Vector(-ARENA_HALF_X + MARKER_DEPTH / 2.0,
+                                edge_sign * WEST_PILLAR_Y,
+                                WEST_PILLAR_HEIGHT / 2.0),
+                  unreal.Vector(MARKER_DEPTH / 100.0, WEST_PILLAR_WIDTH_Y / 100.0, WEST_PILLAR_HEIGHT / 100.0))
 
+    EAST_BAND_HEIGHT = 2000.0
+    EAST_BAND_HALF_WIDTH_Y = ARENA_HALF_Y - 500.0  # quase toda a largura da parede
     spawn_box(actors, "Marco_Leste",
-              unreal.Vector(MARCO_X, 0.0, 3000.0),
-              unreal.Vector(20.0, 140.0, 60.0))
+              unreal.Vector(ARENA_HALF_X - MARKER_DEPTH / 2.0,
+                            0.0,
+                            GOAL_HEIGHT_Z + EAST_BAND_HEIGHT / 2.0),
+              unreal.Vector(MARKER_DEPTH / 100.0, EAST_BAND_HALF_WIDTH_Y * 2 / 100.0, EAST_BAND_HEIGHT / 100.0))
 
     # Teto: fecha a arena por cima em Z = ArenaCeilingZ, cobrindo toda a
     # planta da arena (mesmo padrao das paredes: cubo de 100 escalado pra
