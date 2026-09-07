@@ -80,28 +80,7 @@ void APlanePawn::Tick(float DeltaSeconds)
 	// Respawnou neste frame: volta ao ponto inicial, parado e visivel.
 	if (!FuelState.bIsDestroyed && bWasDestroyed)
 	{
-		bWasDestroyed = false;
-		SetActorTransform(SpawnTransform);
-		ResetFlightStateTo(SpawnTransform);
-
-		// Os quatro eixos sao atribuidos (nao acumulados) pelos handlers de
-		// BindAxis, e o pawn ticka depois do PlayerController, entao eles ja
-		// guardam o valor atual do frame - zerar aqui e inocuo hoje, mas fica
-		// certo se o input for desabilitado enquanto o ator esta destruido.
-		// bBoostInput ja e outra historia: e orientado a evento (IE_Pressed/
-		// IE_Released). Esconder o ator NAO suprime input - a causa real e que
-		// um jogador que segura a tecla de boost durante toda a morte nunca
-		// gera um IE_Released, entao a flag continua true atravessando o
-		// respawn inteiro. Sem isto o aviao renasce ainda "boostando",
-		// reesvazia o tanque e reexplode em loop.
-		ThrottleInput = 0.f;
-		PitchInput = 0.f;
-		YawInput = 0.f;
-		RollInput = 0.f;
-		bBoostInput = false;
-
-		SetActorHiddenInGame(false);
-		SetActorEnableCollision(true);
+		PerformSpawnReset();
 	}
 
 	if (FuelState.bIsDestroyed)
@@ -247,4 +226,42 @@ void APlanePawn::ResetFlightStateTo(const FTransform& Transform)
 	FlightState.PitchDeg = Rotation.Pitch;
 	FlightState.YawDeg = Rotation.Yaw;
 	FlightState.RollDeg = Rotation.Roll;
+}
+
+void APlanePawn::PerformSpawnReset()
+{
+	bWasDestroyed = false;
+	SetActorTransform(SpawnTransform);
+	ResetFlightStateTo(SpawnTransform);
+
+	// Os quatro eixos sao atribuidos (nao acumulados) pelos handlers de
+	// BindAxis, e o pawn ticka depois do PlayerController, entao eles ja
+	// guardam o valor atual do frame - zerar aqui e inocuo hoje, mas fica
+	// certo se o input for desabilitado enquanto o ator esta destruido.
+	// bBoostInput ja e outra historia: e orientado a evento (IE_Pressed/
+	// IE_Released). Esconder o ator NAO suprime input - a causa real e que
+	// um jogador que segura a tecla de boost durante toda a morte nunca
+	// gera um IE_Released, entao a flag continua true atravessando o
+	// respawn inteiro. Sem isto o aviao renasce ainda "boostando",
+	// reesvazia o tanque e reexplode em loop.
+	ThrottleInput = 0.f;
+	PitchInput = 0.f;
+	YawInput = 0.f;
+	RollInput = 0.f;
+	bBoostInput = false;
+
+	SetActorHiddenInGame(false);
+	SetActorEnableCollision(true);
+}
+
+void APlanePawn::ResetToSpawn()
+{
+	// Reabastece antes do reset de ator. FFuelState{} tambem zera bIsDestroyed
+	// e RespawnTimer -- um aviao que explodiu no exato instante do gol volta
+	// vivo e visivel em vez de ficar preso escondido ate um timer que nao
+	// existe mais controlar. PerformSpawnReset ja forca bWasDestroyed=false e
+	// a visibilidade/colisao de volta, entao a bookkeeping fica consistente
+	// nos dois casos (aviao vivo ou destruido no momento do gol).
+	FuelState = FFuelState();
+	PerformSpawnReset();
 }

@@ -40,6 +40,18 @@ void AFutebolAviaoGameModeBase::Tick(float DeltaSeconds)
 	{
 		MatchRules.RegisterGoal(MatchState, Side);
 		Ball->ResetToCenter();
+
+		// Reset de verdade no gol: todo aviao volta pro proprio spawn, parado
+		// e com tanque cheio, nao so a bola. FMatchRules de proposito nao sabe
+		// nada disto -- reset e comportamento de adapter, nao regra pura de
+		// partida.
+		for (TActorIterator<APlanePawn> It(GetWorld()); It; ++It)
+		{
+			if (APlanePawn* Plane = *It)
+			{
+				Plane->ResetToSpawn();
+			}
+		}
 	}
 
 #if !UE_BUILD_SHIPPING
