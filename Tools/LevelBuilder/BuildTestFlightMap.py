@@ -49,7 +49,13 @@ PLAYER_START_Z = 1500.0
 # da Fase 4 vai funcionar. Com um jogador so, o segundo fica sobrando de
 # proposito: e o que prova que o respawn respeita o heading em que foi colocado
 # (APlanePawn semeia o FlightState a partir do transform do spawn).
-PLAYER_START_X = 16000.0
+#
+# Derivado de ARENA_HALF_X (nao um literal solto): um literal separado escapa
+# de check_matches_cpp() e nao acompanha a arena se ela encolher -- foi
+# exatamente assim que os PlayerStarts foram parar dentro da parede de fundo
+# numa revisao anterior. Com 4000 de folga, o aviao nasce bem antes da linha
+# de gol em qualquer escala testada ate agora.
+PLAYER_START_X = ARENA_HALF_X - 4000.0
 
 # Chao gigante so pra dar referencia visual de velocidade durante o playtest --
 # precisa cobrir os 400m x 240m da arena nova (o cubo da engine tem 100 de lado).
