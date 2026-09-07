@@ -85,51 +85,60 @@ static FBounds MeasureModel(EPlaneModel Model)
 	return Bounds;
 }
 
-static void Test_ArcadeIsOnePointFiveBallDiametersLong()
+static const char* ModelName(EPlaneModel Model)
 {
-	const FBounds Bounds = MeasureModel(EPlaneModel::Arcade);
+	switch (Model)
+	{
+	case EPlaneModel::Delta:   return "Delta";
+	case EPlaneModel::Warbird: return "Warbird";
+	case EPlaneModel::Arcade:  return "Arcade";
+	}
+	return "?";
+}
+
+static void Test_ModelIsOnePointFiveBallDiametersLong(EPlaneModel Model)
+{
+	const FBounds Bounds = MeasureModel(Model);
 	const float Length = Bounds.MaxX - Bounds.MinX;
 
 	assert(std::fabs(Length / TargetLength - 1.f) <= 0.03f);
-	printf("Test_ArcadeIsOnePointFiveBallDiametersLong passed (%.3f)\n", Length);
+	printf("Test_ModelIsOnePointFiveBallDiametersLong[%s] passed (%.3f)\n", ModelName(Model), Length);
 }
 
-static void Test_ArcadeIsOnePointFiveBallDiametersWide()
+static void Test_ModelIsOnePointFiveBallDiametersWide(EPlaneModel Model)
 {
-	const FBounds Bounds = MeasureModel(EPlaneModel::Arcade);
+	const FBounds Bounds = MeasureModel(Model);
 	const float Span = Bounds.MaxY - Bounds.MinY;
 
 	assert(std::fabs(Span / TargetSpan - 1.f) <= 0.03f);
-	printf("Test_ArcadeIsOnePointFiveBallDiametersWide passed (%.3f)\n", Span);
+	printf("Test_ModelIsOnePointFiveBallDiametersWide[%s] passed (%.3f)\n", ModelName(Model), Span);
 }
 
-static void Test_ArcadeStaysCloseToItsCollisionSphere()
+static void Test_ModelStaysCloseToItsCollisionSphere(EPlaneModel Model)
 {
-	const FPlaneCollision Collision = PlaneModel::GetCollision(EPlaneModel::Arcade);
+	const FPlaneCollision Collision = PlaneModel::GetCollision(Model);
 	assert(Collision.Count >= 1);
 
-	const FBounds Bounds = MeasureModel(EPlaneModel::Arcade);
+	const FBounds Bounds = MeasureModel(Model);
 	const float Ratio = Bounds.FarthestCorner / Collision.Spheres[0].Radius;
 
 	assert(Ratio <= MaxCornerOverRadius);
-	printf("Test_ArcadeStaysCloseToItsCollisionSphere passed (%.3f)\n", Ratio);
+	printf("Test_ModelStaysCloseToItsCollisionSphere[%s] passed (%.3f)\n", ModelName(Model), Ratio);
 }
 
-static void Test_ArcadeHasACollisionSphereWithPositiveRadius()
+static void Test_ModelHasACollisionSphereWithPositiveRadius(EPlaneModel Model)
 {
-	const FPlaneCollision Collision = PlaneModel::GetCollision(EPlaneModel::Arcade);
+	const FPlaneCollision Collision = PlaneModel::GetCollision(Model);
 
 	assert(Collision.Count >= 1);
 	assert(Collision.Count <= FPlaneCollision::MaxSpheres);
 	assert(Collision.Spheres[0].Radius > 0.f);
-	printf("Test_ArcadeHasACollisionSphereWithPositiveRadius passed\n");
+	printf("Test_ModelHasACollisionSphereWithPositiveRadius[%s] passed\n", ModelName(Model));
 }
 
-static void Test_ArcadeHasAtLeastOneTeamColoredPart()
+static void Test_ModelHasAtLeastOneTeamColoredPart(EPlaneModel Model)
 {
-	// Sem nenhuma peca Team, o aviao existe mas o time nao aparece -- a cor
-	// nao teria onde pousar.
-	const FPlaneParts Parts = PlaneModel::GetParts(EPlaneModel::Arcade);
+	const FPlaneParts Parts = PlaneModel::GetParts(Model);
 	bool bFoundTeamPart = false;
 
 	for (int Index = 0; Index < Parts.Count; ++Index)
@@ -138,26 +147,97 @@ static void Test_ArcadeHasAtLeastOneTeamColoredPart()
 	}
 
 	assert(bFoundTeamPart);
-	printf("Test_ArcadeHasAtLeastOneTeamColoredPart passed\n");
+	printf("Test_ModelHasAtLeastOneTeamColoredPart[%s] passed\n", ModelName(Model));
 }
 
-static void Test_ArcadeFitsInTheFixedArrays()
+static void Test_ModelFitsInTheFixedArrays(EPlaneModel Model)
 {
-	const FPlaneParts Parts = PlaneModel::GetParts(EPlaneModel::Arcade);
+	const FPlaneParts Parts = PlaneModel::GetParts(Model);
 
 	assert(Parts.Count > 0);
 	assert(Parts.Count <= FPlaneParts::MaxParts);
-	printf("Test_ArcadeFitsInTheFixedArrays passed (%d pecas)\n", Parts.Count);
+	printf("Test_ModelFitsInTheFixedArrays[%s] passed (%d pecas)\n", ModelName(Model), Parts.Count);
+}
+
+// Cilindro e cone nascem com o eixo em Z e o adapter conserta esse eixo com um
+// pitch de 90 graus (Task 3). Compor esse conserto com uma rotacao de design
+// nao e soma de angulos, e a Task 3 nao tenta fazer essa composicao. Enquanto
+// nao fizer, uma peca redonda com rotacao de design sairia torta em silencio;
+// este teste torna isso impossivel de passar despercebido.
+static void Test_RoundPartsHaveNoDesignRotation(EPlaneModel Model)
+{
+	const FPlaneParts Parts = PlaneModel::GetParts(Model);
+
+	for (int Index = 0; Index < Parts.Count; ++Index)
+	{
+		const FPlanePart& Part = Parts.Parts[Index];
+		const bool bIsRound = Part.Shape == EPlaneShape::Cylinder || Part.Shape == EPlaneShape::Cone;
+		if (bIsRound)
+		{
+			assert(Part.PitchDeg == 0.f && Part.YawDeg == 0.f && Part.RollDeg == 0.f);
+		}
+	}
+
+	printf("Test_RoundPartsHaveNoDesignRotation[%s] passed\n", ModelName(Model));
+}
+
+// Sem isto, a Task 2 nao teria um teste capaz de falhar: enquanto GetParts
+// cai no default e devolve o arcade pros tres, todas as assercoes acima
+// passam -- medindo o arcade tres vezes e aprovando dois modelos que nao
+// existem. Este teste e o que exige que os tres sejam realmente distintos.
+static void Test_TheThreeModelsAreDifferentFromEachOther()
+{
+	const FPlaneParts Delta = PlaneModel::GetParts(EPlaneModel::Delta);
+	const FPlaneParts Warbird = PlaneModel::GetParts(EPlaneModel::Warbird);
+	const FPlaneParts Arcade = PlaneModel::GetParts(EPlaneModel::Arcade);
+
+	// O delta e o unico com asa enflechada; o warbird e o arcade sao os unicos
+	// com helice. Duas propriedades que separam os tres dois a dois.
+	bool bDeltaHasSweptWing = false;
+	bool bDeltaHasPropeller = false;
+	for (int Index = 0; Index < Delta.Count; ++Index)
+	{
+		if (Delta.Parts[Index].YawDeg != 0.f) bDeltaHasSweptWing = true;
+		if (Delta.Parts[Index].bSpins) bDeltaHasPropeller = true;
+	}
+
+	bool bWarbirdHasPropeller = false;
+	for (int Index = 0; Index < Warbird.Count; ++Index)
+	{
+		if (Warbird.Parts[Index].bSpins) bWarbirdHasPropeller = true;
+	}
+
+	bool bArcadeHasSweptWing = false;
+	for (int Index = 0; Index < Arcade.Count; ++Index)
+	{
+		if (Arcade.Parts[Index].YawDeg != 0.f) bArcadeHasSweptWing = true;
+	}
+
+	assert(bDeltaHasSweptWing);
+	assert(!bDeltaHasPropeller);
+	assert(bWarbirdHasPropeller);
+	assert(!bArcadeHasSweptWing);
+	assert(Delta.Count != Warbird.Count);
+	printf("Test_TheThreeModelsAreDifferentFromEachOther passed\n");
 }
 
 int main()
 {
-	Test_ArcadeIsOnePointFiveBallDiametersLong();
-	Test_ArcadeIsOnePointFiveBallDiametersWide();
-	Test_ArcadeStaysCloseToItsCollisionSphere();
-	Test_ArcadeHasACollisionSphereWithPositiveRadius();
-	Test_ArcadeHasAtLeastOneTeamColoredPart();
-	Test_ArcadeFitsInTheFixedArrays();
+	const EPlaneModel Models[] = { EPlaneModel::Delta, EPlaneModel::Warbird, EPlaneModel::Arcade };
+
+	Test_TheThreeModelsAreDifferentFromEachOther();
+
+	for (const EPlaneModel Model : Models)
+	{
+		Test_ModelIsOnePointFiveBallDiametersLong(Model);
+		Test_ModelIsOnePointFiveBallDiametersWide(Model);
+		Test_ModelStaysCloseToItsCollisionSphere(Model);
+		Test_ModelHasACollisionSphereWithPositiveRadius(Model);
+		Test_ModelHasAtLeastOneTeamColoredPart(Model);
+		Test_ModelFitsInTheFixedArrays(Model);
+		Test_RoundPartsHaveNoDesignRotation(Model);
+	}
+
 	printf("All tests passed\n");
 	return 0;
 }

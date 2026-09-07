@@ -44,12 +44,45 @@ namespace
 		AddPart(Parts, EPlaneShape::Sphere,    0.70f,  0.f,  0.00f,  0.10f, 0.10f, 0.10f, EPlaneTint::Light);
 		return Parts;
 	}
+
+	FPlaneParts BuildWarbird()
+	{
+		FPlaneParts Parts;
+		//       forma                   offset x/y/z          size x/y/z            tint
+		AddPart(Parts, EPlaneShape::Cylinder,  0.00f,  0.f,  0.00f,  1.15f, 0.32f, 0.32f, EPlaneTint::Team);
+		AddPart(Parts, EPlaneShape::Cylinder,  0.62f,  0.f,  0.00f,  0.20f, 0.34f, 0.34f, EPlaneTint::Team);
+		AddPart(Parts, EPlaneShape::Cube,      0.70f,  0.f,  0.00f,  0.03f, 0.06f, 0.48f, EPlaneTint::Dark, 0.f, true);
+		AddPart(Parts, EPlaneShape::Cone,      0.71f,  0.f,  0.00f,  0.06f, 0.12f, 0.12f, EPlaneTint::Light);
+		AddPart(Parts, EPlaneShape::Sphere,    0.05f,  0.f,  0.18f,  0.32f, 0.24f, 0.18f, EPlaneTint::Light);
+		AddPart(Parts, EPlaneShape::Cube,      0.05f,  0.f, -0.02f,  0.34f, 1.50f, 0.05f, EPlaneTint::Team);
+		AddPart(Parts, EPlaneShape::Cube,     -0.55f,  0.f,  0.02f,  0.20f, 0.52f, 0.04f, EPlaneTint::Team);
+		AddPart(Parts, EPlaneShape::Cube,     -0.60f,  0.f,  0.22f,  0.26f, 0.05f, 0.32f, EPlaneTint::Team);
+		return Parts;
+	}
+
+	FPlaneParts BuildDelta()
+	{
+		FPlaneParts Parts;
+		//       forma                   offset x/y/z          size x/y/z            tint                     yaw
+		AddPart(Parts, EPlaneShape::Cylinder,  0.00f,  0.00f,  0.00f,  1.30f, 0.30f, 0.30f, EPlaneTint::Team);
+		AddPart(Parts, EPlaneShape::Cone,      0.68f,  0.00f,  0.00f,  0.16f, 0.28f, 0.28f, EPlaneTint::Dark);
+		AddPart(Parts, EPlaneShape::Sphere,    0.28f,  0.00f,  0.16f,  0.30f, 0.22f, 0.18f, EPlaneTint::Light);
+		AddPart(Parts, EPlaneShape::Cube,     -0.10f, -0.33f,  0.00f,  0.50f, 0.70f, 0.05f, EPlaneTint::Team, -18.f);
+		AddPart(Parts, EPlaneShape::Cube,     -0.10f,  0.33f,  0.00f,  0.50f, 0.70f, 0.05f, EPlaneTint::Team,  18.f);
+		AddPart(Parts, EPlaneShape::Cube,     -0.55f,  0.00f,  0.26f,  0.30f, 0.05f, 0.38f, EPlaneTint::Team);
+		AddPart(Parts, EPlaneShape::Cylinder, -0.68f,  0.00f,  0.00f,  0.12f, 0.26f, 0.26f, EPlaneTint::Dark);
+		return Parts;
+	}
 }
 
 FPlaneParts PlaneModel::GetParts(EPlaneModel Model)
 {
 	switch (Model)
 	{
+	case EPlaneModel::Delta:
+		return BuildDelta();
+	case EPlaneModel::Warbird:
+		return BuildWarbird();
 	case EPlaneModel::Arcade:
 	default:
 		return BuildArcade();
