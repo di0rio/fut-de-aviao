@@ -199,6 +199,14 @@ void APlanePawn::ApplyTuningCVars()
 	Tuning::Apply(CVarFuelBoostDrain, TunedFuel.BoostDrainPerSec);
 	Tuning::Apply(CVarFuelRegen, TunedFuel.PassiveRegenPerSec);
 	Tuning::Apply(CVarFuelRespawnSeconds, TunedFuel.RespawnSeconds);
+
+	// Piso de seguranca: capacidade 0 (ou negativa) trava o aviao destruido
+	// pra sempre. ClampValue(Fuel, 0, TankCapacity) prende o combustivel em
+	// 0 -> destruido; o respawn calcula TankCapacity * RespawnFuelFraction,
+	// que tambem da 0 com capacidade 0 -> destruido nascendo, em loop, sem
+	// nenhum valor digitado no CVar conseguir tirar o jogador dali de novo.
+	TunedFuel.TankCapacity = FMath::Max(TunedFuel.TankCapacity, 1.f);
+
 	FuelSystem.SetParams(TunedFuel);
 
 	CollisionRadius = DefaultCollisionRadius;
