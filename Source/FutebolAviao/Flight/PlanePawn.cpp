@@ -4,6 +4,8 @@
 #include "Camera/CameraComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/Engine.h"
+#include "EngineUtils.h"
+#include "BallActor.h"
 #include "../Tuning/TuningCVars.h"
 
 namespace
@@ -118,11 +120,36 @@ void APlanePawn::Tick(float DeltaSeconds)
 #if !UE_BUILD_SHIPPING
 	if (GEngine)
 	{
+		// Nenhum CVar checa em runtime se a regra de design "cruzeiro < bola <
+		// boost" continua valendo depois de tuning ao vivo. fa.Ball.MaxSpeed
+		// 9000 faz a bola voltar a ultrapassar o boost; fa.Plane.MaxSpeed 7000
+		// faz o cruzeiro ultrapassar o teto do boost, ou seja segurar boost
+		// deixa o aviao MAIS LENTO enquanto ainda queima combustivel -- e
+		// confuso sem nenhum aviso. Checagem do proprio aviao sempre roda;
+		// a checagem de tres pontas com a bola so entra se houver uma
+		// ABallActor no mundo (mesmo TActorIterator usado em
+		// AFutebolAviaoGameModeBase::BeginPlay) -- leitura pontual, nao uma
+		// dependencia estrutural do aviao na bola.
+		const FFlightPhysicsParams& PlaneParams = FlightPhysics.GetParams();
+		bool bDesignRuleBroken = PlaneParams.MaxSpeed >= PlaneParams.BoostMaxSpeed;
+
+		for (TActorIterator<ABallActor> It(GetWorld()); It; ++It)
+		{
+			const float BallMaxSpeed = It->GetBallParams().MaxSpeed;
+			if (BallMaxSpeed <= PlaneParams.MaxSpeed || BallMaxSpeed >= PlaneParams.BoostMaxSpeed)
+			{
+				bDesignRuleBroken = true;
+			}
+			break;
+		}
+
 		// Chave por pawn (nao um literal fixo): com quatro avioes locais, um
 		// literal fixo faz todos escreverem no mesmo slot e so um aparece.
 		const uint64 DebugKey = static_cast<uint64>(GetUniqueID());
 		GEngine->AddOnScreenDebugMessage(DebugKey, 0.05f, FColor::Yellow,
-			FString::Printf(TEXT("Fuel %.0f  Speed %.0f%s"), FuelState.Fuel, FFlightPhysics::GetSpeed(FlightState), bBoostActive ? TEXT("  BOOST") : TEXT("")));
+			FString::Printf(TEXT("Fuel %.0f  Speed %.0f%s%s"), FuelState.Fuel, FFlightPhysics::GetSpeed(FlightState),
+				bBoostActive ? TEXT("  BOOST") : TEXT(""),
+				bDesignRuleBroken ? TEXT("  REGRA QUEBRADA") : TEXT("")));
 	}
 #endif
 }

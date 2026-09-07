@@ -20,6 +20,11 @@ public:
 
 	const FBallState& GetBallState() const { return BallState; }
 
+	// So leitura -- usado por APlanePawn pra checar em runtime se a regra de
+	// design "cruzeiro < bola < boost" ainda vale depois de CVars de tuning
+	// (ver ApplyTuningCVars em PlanePawn.cpp).
+	const FBallPhysicsParams& GetBallParams() const { return BallPhysics.GetParams(); }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
