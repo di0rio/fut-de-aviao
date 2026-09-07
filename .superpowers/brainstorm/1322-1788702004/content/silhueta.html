@@ -1,0 +1,101 @@
+<h2>Qual silhueta de avião?</h2>
+<p class="subtitle">Vista de cima, todas desenhadas na mesma escala da bola (8m de diâmetro, o círculo tracejado). Avião: 12m de comprimento, 12m de envergadura — 1,5× a bola nos dois eixos.</p>
+
+<style>
+  .sil { width: 100%; height: auto; color: inherit; }
+  .sil .body { fill: currentColor; opacity: .82; }
+  .sil .wing { fill: currentColor; opacity: .55; }
+  .sil .tail { fill: currentColor; opacity: .42; }
+  .sil .prop { fill: currentColor; opacity: .16; }
+  .sil .propblade { stroke: currentColor; stroke-width: 4; opacity: .7; }
+  .sil .ball { fill: none; stroke: currentColor; stroke-width: 2; stroke-dasharray: 6 5; opacity: .5; }
+  .sil .tick { stroke: currentColor; stroke-width: 1.5; opacity: .35; }
+  .sil text { fill: currentColor; opacity: .5; font-size: 12px; font-family: inherit; }
+  .card-image { padding: 8px 4px; }
+</style>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <svg class="sil" viewBox="0 0 420 230" xmlns="http://www.w3.org/2000/svg">
+        <!-- bola 8m = 112px  (14 px/m) -->
+        <circle class="ball" cx="56" cy="115" r="56"/>
+        <text x="30" y="196">bola 8m</text>
+
+        <!-- asa delta -->
+        <polygon class="wing" points="330,105 200,31 190,105"/>
+        <polygon class="wing" points="330,125 200,199 190,125"/>
+        <!-- estabilizadores -->
+        <polygon class="tail" points="215,107 165,72 160,107"/>
+        <polygon class="tail" points="215,123 165,158 160,123"/>
+        <!-- fuselagem + nariz -->
+        <rect class="body" x="160" y="104" width="200" height="22" rx="8"/>
+        <polygon class="body" points="360,104 396,115 360,126"/>
+
+        <line class="tick" x1="160" y1="212" x2="396" y2="212"/>
+        <text x="245" y="208">12 m</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A — Caça delta</h3>
+      <p>Asa em seta, nariz pontudo, sem hélice. A seta aponta para onde o avião vai — a silhueta mais legível a 200m de distância. Feita de cone + cubos rotacionados.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <svg class="sil" viewBox="0 0 420 230" xmlns="http://www.w3.org/2000/svg">
+        <circle class="ball" cx="56" cy="115" r="56"/>
+        <text x="30" y="196">bola 8m</text>
+
+        <!-- asas retas -->
+        <rect class="wing" x="252" y="31" width="44" height="168" rx="6"/>
+        <!-- estabilizador horizontal -->
+        <rect class="tail" x="172" y="81" width="30" height="68" rx="5"/>
+        <!-- fuselagem -->
+        <rect class="body" x="168" y="103" width="184" height="24" rx="10"/>
+        <!-- helice -->
+        <ellipse class="prop" cx="360" cy="115" rx="12" ry="62"/>
+        <line class="propblade" x1="360" y1="55" x2="360" y2="175"/>
+        <polygon class="body" points="352,105 364,115 352,125"/>
+
+        <line class="tick" x1="168" y1="212" x2="372" y2="212"/>
+        <text x="250" y="208">12 m</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B — Monomotor a hélice</h3>
+      <p>Warbird clássico: asa reta no meio, cauda em cruz, hélice girando na frente. A hélice dá sensação de motor e de velocidade parado no ar. Cilindro + cubos, sem rotação diagonal.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <svg class="sil" viewBox="0 0 420 230" xmlns="http://www.w3.org/2000/svg">
+        <circle class="ball" cx="56" cy="115" r="56"/>
+        <text x="30" y="196">bola 8m</text>
+
+        <!-- asas gordas -->
+        <rect class="wing" x="240" y="17" width="62" height="196" rx="14"/>
+        <!-- cauda grande -->
+        <rect class="tail" x="172" y="69" width="42" height="92" rx="10"/>
+        <!-- corpo gordo -->
+        <rect class="body" x="170" y="94" width="176" height="42" rx="20"/>
+        <!-- helice grande -->
+        <ellipse class="prop" cx="356" cy="115" rx="14" ry="72"/>
+        <line class="propblade" x1="356" y1="45" x2="356" y2="185"/>
+
+        <line class="tick" x1="170" y1="220" x2="370" y2="220"/>
+        <text x="252" y="216">12 m</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>C — Arcade gordinho</h3>
+      <p>Corpo curto e roliço, asa enorme, hélice grande. Silhueta de brinquedo — combina com o estádio feito de blocos, e é a que aceita cor sólida de time melhor (área grande e chapada).</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:20px">Todas as três são montáveis só com <code>/Engine/BasicShapes</code> (cubo, cilindro, cone, esfera) — zero arte importada, tudo versionado em texto.</p>
