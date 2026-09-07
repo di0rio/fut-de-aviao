@@ -191,8 +191,10 @@ static void Test_TheThreeModelsAreDifferentFromEachOther()
 	const FPlaneParts Warbird = PlaneModel::GetParts(EPlaneModel::Warbird);
 	const FPlaneParts Arcade = PlaneModel::GetParts(EPlaneModel::Arcade);
 
-	// O delta e o unico com asa enflechada; o warbird e o arcade sao os unicos
-	// com helice. Duas propriedades que separam os tres dois a dois.
+	// O delta e o unico com asa enflechada; o warbird tem fuselagem cilindrica
+	// fina (aerodinamica esportiva) enquanto o arcade tem fuselagem grossa
+	// (design robusto). Tres propriedades que separam os tres dois a dois:
+	// delta vs todos pela asa, warbird vs arcade pela fuselagem.
 	bool bDeltaHasSweptWing = false;
 	bool bDeltaHasPropeller = false;
 	for (int Index = 0; Index < Delta.Count; ++Index)
@@ -213,11 +215,15 @@ static void Test_TheThreeModelsAreDifferentFromEachOther()
 		if (Arcade.Parts[Index].YawDeg != 0.f) bArcadeHasSweptWing = true;
 	}
 
+	// Warbird fuselage is thin (0.32); if Warbird were misaligned to Arcade,
+	// it would inherit Arcade fuselage (0.42). This catches that aliasing.
+	const bool bWarbirdFuselageThinnerThanArcade = Warbird.Parts[0].Size.Y < Arcade.Parts[0].Size.Y;
+
 	assert(bDeltaHasSweptWing);
 	assert(!bDeltaHasPropeller);
 	assert(bWarbirdHasPropeller);
 	assert(!bArcadeHasSweptWing);
-	assert(Delta.Count != Warbird.Count);
+	assert(bWarbirdFuselageThinnerThanArcade);
 	printf("Test_TheThreeModelsAreDifferentFromEachOther passed\n");
 }
 
