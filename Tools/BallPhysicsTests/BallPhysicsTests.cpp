@@ -1,4 +1,5 @@
 #include "../../Source/FutebolAviao/Flight/BallPhysics.h"
+#include "../../Source/FutebolAviao/Flight/FlightPhysics.h"
 #include <cassert>
 #include <cstdio>
 #include <cmath>
@@ -219,6 +220,93 @@ static void Test_BallHittingTheBackWallOutsideTheMouthStillBounces()
 	printf("Test_BallHittingTheBackWallOutsideTheMouthStillBounces passed\n");
 }
 
+static void Test_UpdateClampsVelocityAboveMaxSpeed()
+{
+	// Achado da revisao: nenhum teste existente produzia uma velocidade acima
+	// de 5300 contra o teto de 6000 do default -- o clamp de Update nunca era
+	// exercitado de verdade. Velocidade inicial bem acima do MaxSpeed default
+	// (6000), sem gravidade/arrasto/parede no caminho, pra isolar so o clamp.
+	FBallPhysicsParams Params;
+	Params.Gravity = 0.f;
+	Params.Drag = 0.f;
+	Params.Arena.ArenaHalfX = 100000.f;
+	Params.Arena.ArenaHalfY = 100000.f;
+	Params.Arena.ArenaCeilingZ = 100000.f;
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.Z = 50000.f;   // longe de qualquer parede/chao/teto
+	State.Velocity.X = 9000.f;    // bem acima do MaxSpeed default (6000)
+
+	Ball.Update(State, 0.01f);
+
+	const float Speed = PureMath::Length(State.Velocity);
+	assert(Speed <= Params.MaxSpeed + 0.01f);
+	assert(NearlyEqual(Speed, Params.MaxSpeed, 1.f));
+	printf("Test_UpdateClampsVelocityAboveMaxSpeed passed\n");
+}
+
+static void Test_ApplyImpulseClampsVelocityAboveMaxSpeed()
+{
+	// Mesmo achado, no outro lugar onde o clamp existe: ApplyImpulse (o
+	// caminho de impacto do aviao), que e um clamp separado do de Update --
+	// quebrar um nao quebra o outro, entao os dois precisam de teste proprio.
+	FBallPhysicsParams Params;
+	Params.Radius = 150.f;
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.X = 400.f;
+	State.Velocity.X = 5900.f;   // ja perto do teto default (6000)
+
+	PureMath::FPureVector PlanePosition;
+	PureMath::FPureVector PlaneVelocity;
+	PlaneVelocity.X = 8000.f;    // impulso que sozinho passaria bem do teto
+
+	Ball.ApplyImpulse(State, PlanePosition, PlaneVelocity);
+
+	const float Speed = PureMath::Length(State.Velocity);
+	assert(Speed <= Params.MaxSpeed + 0.01f);
+	assert(NearlyEqual(Speed, Params.MaxSpeed, 1.f));
+	printf("Test_ApplyImpulseClampsVelocityAboveMaxSpeed passed\n");
+}
+
+static void Test_BallBouncesOffThePlusYSideWall()
+{
+	// Achado da revisao: todo teste existente fica em Y=0, Y=4000, ou usa
+	// ArenaHalfY=100000 -- a contencao de verdade no eixo Y (o BounceAxis de
+	// +-ArenaHalfY, que impede a bola de escapar pelas laterais) nunca era
+	// exercitada. Bola perto da parede em +ArenaHalfY, indo na direcao dela.
+	FBallPhysicsParams Params;
+	Params.Gravity = 0.f;
+	Params.Drag = 0.f;
+	Params.Radius = 150.f;
+	Params.Restitution = 0.75f;
+	Params.Arena.ArenaHalfX = 100000.f;   // fora do caminho: so o eixo Y importa aqui
+	Params.Arena.ArenaHalfY = 5000.f;
+	FBallPhysics Ball(Params);
+	FBallState State;
+	State.Position.Y = 4900.f;   // perto da parede em +ArenaHalfY (5000)
+	State.Velocity.Y = 2000.f;   // indo na direcao da parede
+
+	Ball.Update(State, 1.f);   // chegaria a 6900, alem da parede: deve quicar
+
+	assert(NearlyEqual(State.Position.Y, Params.Arena.ArenaHalfY - Params.Radius));
+	assert(State.Velocity.Y < 0.f);   // quicou de volta pro campo
+	printf("Test_BallBouncesOffThePlusYSideWall passed\n");
+}
+
+static void Test_BallSpeedSitsBetweenCruiseAndBoost()
+{
+	// A regra que sustenta a fase inteira: a bola nunca e mais rapida que o
+	// aviao no boost, e e mais rapida que o aviao em cruzeiro. Se alguem mexer
+	// num dos tres defaults sem mexer nos outros, este teste e o alarme.
+	const FFlightPhysicsParams Plane;
+	const FBallPhysicsParams Ball;
+
+	assert(Ball.MaxSpeed > Plane.MaxSpeed);
+	assert(Ball.MaxSpeed < Plane.BoostMaxSpeed);
+	printf("Test_BallSpeedSitsBetweenCruiseAndBoost passed\n");
+}
+
 int main()
 {
 	Test_GravityPullsTheBallDown();
@@ -230,6 +318,10 @@ int main()
 	Test_BallAboveTheCrossbarBouncesInsteadOfEscaping();
 	Test_IsOverlappingDetectsContactAndSeparation();
 	Test_BallHittingTheBackWallOutsideTheMouthStillBounces();
+	Test_UpdateClampsVelocityAboveMaxSpeed();
+	Test_ApplyImpulseClampsVelocityAboveMaxSpeed();
+	Test_BallBouncesOffThePlusYSideWall();
+	Test_BallSpeedSitsBetweenCruiseAndBoost();
 	printf("All tests passed\n");
 	return 0;
 }
