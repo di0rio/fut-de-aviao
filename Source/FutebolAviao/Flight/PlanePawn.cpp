@@ -1,15 +1,37 @@
 #include "PlanePawn.h"
+#include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
-#include "UObject/ConstructorHelpers.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "BallActor.h"
+#include "BallPhysics.h"
+#include "PlaneMeshBuilder.h"
 #include "../Tuning/TuningCVars.h"
 
 namespace
 {
+	// Le fa.Ball.Radius direto do sistema de console -- a CVar de verdade vive
+	// em BallActor.cpp, num namespace anonimo, entao nao da pra referenciar o
+	// TAutoConsoleVariable dali por simbolo. IConsoleManager e a mesma fonte
+	// que a engine usa pra resolver a CVar por nome, e e o unico jeito do
+	// aviao acompanhar o raio da bola ao vivo sem duplicar o default dela
+	// aqui (mesma convencao de Tuning::Apply: -1 ou nao encontrada = default).
+	float GetLiveBallRadius()
+	{
+		float Radius = FBallPhysicsParams().Radius;
+		if (const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("fa.Ball.Radius")))
+		{
+			const float Value = CVar->GetFloat();
+			if (Value >= 0.f)
+			{
+				Radius = Value;
+			}
+		}
+		return Radius;
+	}
+
 	TAutoConsoleVariable<float> CVarPlaneMaxSpeed(TEXT("fa.Plane.MaxSpeed"), -1.f, TEXT("Velocidade maxima em cruzeiro, cm/s. -1 usa o default."));
 	TAutoConsoleVariable<float> CVarPlaneBoostMaxSpeed(TEXT("fa.Plane.BoostMaxSpeed"), -1.f, TEXT("Teto de velocidade no boost, cm/s. -1 usa o default."));
 	TAutoConsoleVariable<float> CVarPlaneAcceleration(TEXT("fa.Plane.Acceleration"), -1.f, TEXT("Aceleracao, cm/s2. -1 usa o default."));
@@ -30,16 +52,9 @@ APlanePawn::APlanePawn()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
-	SetRootComponent(MeshComponent);
-
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> ConeMeshAsset(TEXT("/Engine/BasicShapes/Cone.Cone"));
-	if (ConeMeshAsset.Succeeded())
-	{
-		MeshComponent->SetStaticMesh(ConeMeshAsset.Object);
-		MeshComponent->SetRelativeScale3D(FVector(12.f, 6.f, 6.f));
-		MeshComponent->SetRelativeRotation(FRotator(90.f, 0.f, 0.f));
-	}
+	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComponent"));
+	SetRootComponent(CollisionComponent);
+	CollisionComponent->SetSphereRadius(ComputeDefaultCollisionRadius());
 
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComponent"));
 	SpringArmComponent->SetupAttachment(RootComponent);
@@ -59,12 +74,25 @@ void APlanePawn::BeginPlay()
 	Super::BeginPlay();
 	SpawnTransform = GetActorTransform();
 	ResetFlightStateTo(SpawnTransform);
+
+	// O tamanho do aviao sai do tamanho da bola: a proporcao e a regra, o
+	// numero de centimetros e consequencia. Ver PlaneModel.h.
+	const float BallDiameter = GetLiveBallRadius() * 2.f;
+	FPlaneMeshBuilder::Build(*this, *CollisionComponent, PlaneModelId, BallDiameter,
+		PartComponents, SpinningPartComponents);
 }
 
 void APlanePawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	ApplyTuningCVars();
+
+	// Capturado ANTES de FuelSystem.Update: e o Update desta chamada que pode
+	// virar bIsDestroyed de false pra true (tanque chegou a zero). Sem este
+	// snapshot, o frame que esvazia o tanque cobraria o custo total do boost
+	// (linha abaixo) mas nunca chegaria em FlightPhysics.Update -- o efeito da
+	// aceleracao de boost, custo ja debitado do combustivel.
+	const bool bWasAliveAtFrameStart = !FuelState.bIsDestroyed;
 
 	const bool bBoostActive = FuelSystem.ResolveBoost(FuelState, bBoostInput);
 	FuelSystem.Update(FuelState, bBoostActive, DeltaSeconds);
@@ -83,9 +111,9 @@ void APlanePawn::Tick(float DeltaSeconds)
 		PerformSpawnReset();
 	}
 
-	if (FuelState.bIsDestroyed)
+	if (!bWasAliveAtFrameStart)
 	{
-		return; // fora da jogada: sem fisica de voo enquanto o timer roda
+		return; // ja estava fora da jogada antes deste frame: sem fisica de voo
 	}
 
 	FlightPhysics.Update(FlightState, ThrottleInput, PitchInput, YawInput, RollInput, bBoostActive, DeltaSeconds);
@@ -94,6 +122,15 @@ void APlanePawn::Tick(float DeltaSeconds)
 	SetActorRotation(NewRotation);
 
 	AddActorWorldOffset(FVector(FlightState.Velocity.X, FlightState.Velocity.Y, FlightState.Velocity.Z) * DeltaSeconds, true);
+
+	// Helice: sensacao de motor girando mesmo com o aviao parado no ar.
+	for (UStaticMeshComponent* SpinningPart : SpinningPartComponents)
+	{
+		if (SpinningPart)
+		{
+			SpinningPart->AddLocalRotation(FRotator(0.f, 0.f, 720.f * DeltaSeconds));
+		}
+	}
 
 	// Sem HUD ainda: o combustivel aparece como texto de debug pra dar pra jogar a Task 4.
 #if !UE_BUILD_SHIPPING
@@ -124,7 +161,9 @@ void APlanePawn::Tick(float DeltaSeconds)
 
 		// Chave por pawn (nao um literal fixo): com quatro avioes locais, um
 		// literal fixo faz todos escreverem no mesmo slot e so um aparece.
-		const uint64 DebugKey = static_cast<uint64>(GetUniqueID());
+		// Offset de 1000 pra nunca colidir com as chaves de literal pequeno
+		// que AFutebolAviaoGameModeBase usa pro placar (ex.: chave 2).
+		const uint64 DebugKey = 1000ull + static_cast<uint64>(GetUniqueID());
 		GEngine->AddOnScreenDebugMessage(DebugKey, 0.05f, FColor::Yellow,
 			FString::Printf(TEXT("Fuel %.0f  Speed %.0f%s%s"), FuelState.Fuel, FFlightPhysics::GetSpeed(FlightState),
 				bBoostActive ? TEXT("  BOOST") : TEXT(""),
@@ -198,6 +237,17 @@ void APlanePawn::ApplyTuningCVars()
 	// proposito, pra mirar em 3D ser simetrico.
 	Tuning::Apply(CVarPlaneTurnRate, FlightParams.PitchRateDegPerSec);
 	Tuning::Apply(CVarPlaneTurnRate, FlightParams.YawRateDegPerSec);
+
+	// fa.Plane.MaxSpeed nao pode alcancar nem passar fa.Plane.BoostMaxSpeed:
+	// sem este clamp, segurar boost passaria a FREAR o aviao (o cruzeiro ja
+	// esta no teto ou acima dele) em Shipping, onde o aviso de tela abaixo nao
+	// existe pra pegar isso.
+	static constexpr float MinSpeedGapFromBoost = 1.f;
+	if (FlightParams.MaxSpeed >= FlightParams.BoostMaxSpeed)
+	{
+		FlightParams.MaxSpeed = FlightParams.BoostMaxSpeed - MinSpeedGapFromBoost;
+	}
+
 	FlightPhysics.SetParams(FlightParams);
 
 	FFuelParams TunedFuel;
@@ -215,8 +265,19 @@ void APlanePawn::ApplyTuningCVars()
 
 	FuelSystem.SetParams(TunedFuel);
 
-	CollisionRadius = DefaultCollisionRadius;
+	CollisionRadius = ComputeDefaultCollisionRadius();
 	Tuning::Apply(CVarPlaneCollisionRadius, CollisionRadius);
+
+	if (CollisionComponent)
+	{
+		CollisionComponent->SetSphereRadius(CollisionRadius);
+	}
+}
+
+float APlanePawn::ComputeDefaultCollisionRadius() const
+{
+	const float BallDiameter = GetLiveBallRadius() * 2.f;
+	return PlaneModel::CollisionRadiusFor(PlaneModelId, BallDiameter);
 }
 
 void APlanePawn::ResetFlightStateTo(const FTransform& Transform)

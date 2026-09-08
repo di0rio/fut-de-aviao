@@ -11,6 +11,14 @@ namespace
 		return Result;
 	}
 
+	// Toda primitiva de /Engine/BasicShapes tem 100 de lado.
+	const float BasicShapeSize = 100.f;
+
+	bool IsRound(EPlaneShape Shape)
+	{
+		return Shape == EPlaneShape::Cylinder || Shape == EPlaneShape::Cone;
+	}
+
 	void AddPart(FPlaneParts& Parts, EPlaneShape Shape,
 		float OffsetX, float OffsetY, float OffsetZ,
 		float SizeX, float SizeY, float SizeZ,
@@ -101,4 +109,39 @@ FPlaneCollision PlaneModel::GetCollision(EPlaneModel Model)
 	Collision.Count = 1;
 	Collision.Spheres[0].Radius = 0.75f;
 	return Collision;
+}
+
+PureMath::FPureVector PlaneModel::PartLocation(const FPlanePart& Part, float BallDiameter)
+{
+	return PureMath::Scale(Part.Offset, BallDiameter);
+}
+
+PureMath::FPureVector PlaneModel::PartMeshScale(const FPlanePart& Part, float BallDiameter)
+{
+	const float Factor = BallDiameter / BasicShapeSize;
+
+	if (IsRound(Part.Shape))
+	{
+		// Pitch de 90 manda o Z do mesh pro X do aviao e o X do mesh pro Z.
+		// A escala acompanha a troca, senao o comprimento pedido vira altura.
+		return MakeVector(Part.Size.Z * Factor, Part.Size.Y * Factor, Part.Size.X * Factor);
+	}
+
+	return PureMath::Scale(Part.Size, Factor);
+}
+
+float PlaneModel::PartPitchDeg(const FPlanePart& Part)
+{
+	return IsRound(Part.Shape) ? Part.PitchDeg + 90.f : Part.PitchDeg;
+}
+
+float PlaneModel::CollisionRadiusFor(EPlaneModel Model, float BallDiameter)
+{
+	const FPlaneCollision Collision = GetCollision(Model);
+	if (Collision.Count <= 0)
+	{
+		return 0.f;
+	}
+
+	return Collision.Spheres[0].Radius * BallDiameter;
 }
