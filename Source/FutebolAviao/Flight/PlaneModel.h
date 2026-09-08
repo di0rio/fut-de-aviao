@@ -100,4 +100,27 @@ namespace PlaneModel
 	// acrescentar linhas nesta tabela e um laco no ABallActor, sem mexer
 	// em arquitetura.
 	FPlaneCollision GetCollision(EPlaneModel Model);
+
+	// A FRONTEIRA DE UNIDADES. Tudo acima desta linha e medido em diametros de
+	// bola; estas quatro funcoes sao o unico lugar do sistema que sabe que
+	// centimetro existe. Ficam no lado puro de proposito: o adapter da Unreal
+	// (PlaneMeshBuilder) nao tem suite standalone, e sem isto a conversao
+	// seria a unica parte nao testada da cadeia toda.
+
+	// Posicao da peca em centimetros, relativa ao centro do aviao.
+	PureMath::FPureVector PartLocation(const FPlanePart& Part, float BallDiameter);
+
+	// Escala a aplicar no mesh. Todas as primitivas de /Engine/BasicShapes tem
+	// 100 de lado. Cilindro e cone trocam de eixo -- ver PartPitchDeg.
+	PureMath::FPureVector PartMeshScale(const FPlanePart& Part, float BallDiameter);
+
+	// Pitch final da peca: a rotacao de design mais o conserto de eixo das
+	// primitivas redondas (90 graus, que deita o eixo Z do mesh na direcao do
+	// nariz). Cilindro e cone nao podem ter rotacao de design junto -- compor
+	// as duas nao e somar angulos, e a suite trava isso.
+	float PartPitchDeg(const FPlanePart& Part);
+
+	// Raio da esfera de colisao em centimetros. Com BallDiameter = 800 devolve
+	// 600, o valor que ja esta em PlanePawn::DefaultCollisionRadius.
+	float CollisionRadiusFor(EPlaneModel Model, float BallDiameter);
 }

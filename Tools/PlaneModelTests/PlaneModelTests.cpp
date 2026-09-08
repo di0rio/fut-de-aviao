@@ -227,6 +227,99 @@ static void Test_TheThreeModelsAreDifferentFromEachOther()
 	printf("Test_TheThreeModelsAreDifferentFromEachOther passed\n");
 }
 
+static bool NearlyEqual(float A, float B, float Tolerance = 0.01f)
+{
+	return std::fabs(A - B) <= Tolerance;
+}
+
+// A afirmacao de manchete da spec, travada por teste: com a bola de hoje
+// (raio 400, diametro 800), o raio de colisao derivado do modelo tem que dar
+// exatamente o 600 que ja esta em PlanePawn::DefaultCollisionRadius. Se este
+// teste cair, ou a proporcao mudou ou o numero do pawn ficou orfao.
+static void Test_CollisionRadiusMatchesTheValueAlreadyInThePawn()
+{
+	assert(NearlyEqual(PlaneModel::CollisionRadiusFor(EPlaneModel::Arcade, 800.f), 600.f));
+	assert(NearlyEqual(PlaneModel::CollisionRadiusFor(EPlaneModel::Warbird, 800.f), 600.f));
+	assert(NearlyEqual(PlaneModel::CollisionRadiusFor(EPlaneModel::Delta, 800.f), 600.f));
+	printf("Test_CollisionRadiusMatchesTheValueAlreadyInThePawn passed\n");
+}
+
+static void Test_ThePlaneGrowsWithTheBall()
+{
+	// A proporcao e a regra; o tamanho e consequencia. Bola do dobro, aviao do
+	// dobro -- e isso que faz mexer em fa.Ball.Radius durante o Play nao
+	// quebrar a proporcao.
+	const float Small = PlaneModel::CollisionRadiusFor(EPlaneModel::Arcade, 800.f);
+	const float Large = PlaneModel::CollisionRadiusFor(EPlaneModel::Arcade, 1600.f);
+
+	assert(NearlyEqual(Large, Small * 2.f));
+	printf("Test_ThePlaneGrowsWithTheBall passed\n");
+}
+
+static void Test_PartLocationScalesTheOffsetByTheBallDiameter()
+{
+	FPlanePart Part;
+	Part.Offset.X = 0.5f;
+	Part.Offset.Z = -0.25f;
+
+	const PureMath::FPureVector Location = PlaneModel::PartLocation(Part, 800.f);
+
+	assert(NearlyEqual(Location.X, 400.f));
+	assert(NearlyEqual(Location.Y, 0.f));
+	assert(NearlyEqual(Location.Z, -200.f));
+	printf("Test_PartLocationScalesTheOffsetByTheBallDiameter passed\n");
+}
+
+static void Test_BoxPartScalesStraightFromItsSize()
+{
+	// Cubo e esfera de /Engine/BasicShapes tem 100 de lado, e o eixo deles ja
+	// e o do aviao: a escala e o tamanho dividido por 100, sem troca de eixo.
+	FPlanePart Part;
+	Part.Shape = EPlaneShape::Cube;
+	Part.Size.X = 1.f;
+	Part.Size.Y = 0.5f;
+	Part.Size.Z = 0.25f;
+
+	const PureMath::FPureVector Scale = PlaneModel::PartMeshScale(Part, 800.f);
+
+	assert(NearlyEqual(Scale.X, 8.f));
+	assert(NearlyEqual(Scale.Y, 4.f));
+	assert(NearlyEqual(Scale.Z, 2.f));
+	printf("Test_BoxPartScalesStraightFromItsSize passed\n");
+}
+
+static void Test_RoundPartSwapsAxesBecauseItIsBornAlongZ()
+{
+	// Cilindro e cone nascem com o eixo em Z. O adapter os deita com pitch 90,
+	// o que manda o Z do mesh pro X do aviao e o X do mesh pro Z. Logo o
+	// comprimento pedido (Size.X) tem que sair na escala Z do mesh, e a altura
+	// (Size.Z) na escala X -- senao uma fuselagem de 1.10 de comprimento sai
+	// com 1.10 de ALTURA, em pe no lugar de deitada.
+	FPlanePart Part;
+	Part.Shape = EPlaneShape::Cylinder;
+	Part.Size.X = 1.f;      // comprimento
+	Part.Size.Y = 0.5f;     // largura
+	Part.Size.Z = 0.25f;    // altura
+
+	const PureMath::FPureVector Scale = PlaneModel::PartMeshScale(Part, 800.f);
+
+	assert(NearlyEqual(Scale.X, 2.f));   // altura
+	assert(NearlyEqual(Scale.Y, 4.f));   // largura
+	assert(NearlyEqual(Scale.Z, 8.f));   // comprimento
+	assert(NearlyEqual(PlaneModel::PartPitchDeg(Part), 90.f));
+	printf("Test_RoundPartSwapsAxesBecauseItIsBornAlongZ passed\n");
+}
+
+static void Test_BoxPartIsNotPitchedByTheAxisFixUp()
+{
+	FPlanePart Part;
+	Part.Shape = EPlaneShape::Cube;
+	Part.PitchDeg = 0.f;
+
+	assert(NearlyEqual(PlaneModel::PartPitchDeg(Part), 0.f));
+	printf("Test_BoxPartIsNotPitchedByTheAxisFixUp passed\n");
+}
+
 int main()
 {
 	const EPlaneModel Models[] = { EPlaneModel::Delta, EPlaneModel::Warbird, EPlaneModel::Arcade };
@@ -243,6 +336,13 @@ int main()
 		Test_ModelFitsInTheFixedArrays(Model);
 		Test_RoundPartsHaveNoDesignRotation(Model);
 	}
+
+	Test_CollisionRadiusMatchesTheValueAlreadyInThePawn();
+	Test_ThePlaneGrowsWithTheBall();
+	Test_PartLocationScalesTheOffsetByTheBallDiameter();
+	Test_BoxPartScalesStraightFromItsSize();
+	Test_RoundPartSwapsAxesBecauseItIsBornAlongZ();
+	Test_BoxPartIsNotPitchedByTheAxisFixUp();
 
 	printf("All tests passed\n");
 	return 0;

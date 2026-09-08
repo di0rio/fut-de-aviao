@@ -4,9 +4,11 @@
 #include "GameFramework/Pawn.h"
 #include "FlightPhysics.h"
 #include "FuelSystem.h"
+#include "PlaneModel.h"
 #include "PlanePawn.generated.h"
 
 class UStaticMeshComponent;
+class USphereComponent;
 class USpringArmComponent;
 class UCameraComponent;
 
@@ -77,13 +79,31 @@ private:
 
 	void ApplyTuningCVars();
 
-	// Um unico lugar define o default; ApplyTuningCVars restaura a partir dele
-	// todo tick, pra que voltar a CVar pra -1 volte de fato ao default.
-	static constexpr float DefaultCollisionRadius = 600.f;
-	float CollisionRadius = DefaultCollisionRadius;
+	// O default deixou de ser um literal: sai de PlaneModel::CollisionRadiusFor
+	// aplicado ao raio de bola AO VIVO (GetLiveBallRadius, em PlanePawn.cpp),
+	// pra que mudar fa.Ball.Radius em runtime nao desalinhe silenciosamente a
+	// proporcao aviao/bola que a suite de PlaneModel garante. ApplyTuningCVars
+	// recalcula isto todo tick, antes de aplicar fa.Plane.CollisionRadius por
+	// cima -- exatamente como ja fazia com o literal antigo.
+	float ComputeDefaultCollisionRadius() const;
+	float CollisionRadius = 600.f;
 
+	// Modelo visual montado pelo PlaneMeshBuilder. Fixo em Arcade por enquanto
+	// (o default da spec); trocar em runtime via CVar fica pra quando a Fase 4
+	// precisar disso.
+	EPlaneModel PlaneModelId = EPlaneModel::Arcade;
+
+	// A UNICA colisao do aviao. As pecas visuais em PartComponents nao colidem
+	// com nada -- ver PlaneMeshBuilder. Separar as duas coisas e o que faz
+	// trocar o desenho do aviao nunca mudar a fisica dele.
 	UPROPERTY(VisibleAnywhere, Category = "Plane")
-	UStaticMeshComponent* MeshComponent;
+	USphereComponent* CollisionComponent;
+
+	UPROPERTY()
+	TArray<UStaticMeshComponent*> PartComponents;
+
+	UPROPERTY()
+	TArray<UStaticMeshComponent*> SpinningPartComponents;
 
 	UPROPERTY(VisibleAnywhere, Category = "Plane")
 	USpringArmComponent* SpringArmComponent;
